@@ -8,6 +8,7 @@ dependencies:
   - cudatoolkit-dev
   - gcc=10
   - gxx=10
+  - cmake
   - pybind11
   - numpy
   - pip
