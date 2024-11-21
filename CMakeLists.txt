@@ -8,7 +8,7 @@ enable_language(CUDA)
 
 set(TARGET_NAME tensorlib)
 
-set(CUDA_SOURCES src/my_cuda_kernel.cu)
+set(CUDA_SOURCES src/tensor.cu)
 
 pybind11_add_module(${TARGET_NAME} src/pybind_wrapper.cpp ${CUDA_SOURCES})
 
