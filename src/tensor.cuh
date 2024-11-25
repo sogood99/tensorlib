@@ -1,53 +1,60 @@
-#ifndef TENSOR
-#define TENSOR
+#ifndef TENSOR_HPP
+#define TENSOR_HPP
 
-#include <cublas_v2.h>
-#include <pybind11/numpy.h>
-#include <pybind11/pybind11.h>
-
-#include <functional>
-#include <iostream>
 #include <memory>
+#include <string>
 #include <vector>
 
-// Error handling for cuBLAS
-#define CHECK_CUBLAS_ERROR(err)                        \
-  if (err != CUBLAS_STATUS_SUCCESS) {                  \
-    std::cerr << "cuBLAS error: " << err << std::endl; \
-    return;                                            \
-  }
+#include "node.cuh"
+#include "utils.hpp"
 
-namespace py = pybind11;
+class AutogradMeta;
+
+// Enum for device type
+enum class Device { CPU, GPU };
 
 class Tensor {
  private:
-  float* data = nullptr;
-  std::vector<size_t> mshape;
-  size_t msize = 1;
-  Node* node = nullptr;
+  float* data_;                 // Raw data pointer
+  Device device_;               // Device type (CPU or GPU)
+  std::vector<size_t> shape_;   // Shape of the tensor
+  std::vector<size_t> stride_;  // Stride of the tensor
+  bool requires_grad_;          // Gradient tracking flag
+  std::shared_ptr<AutogradMeta> autograd_meta_;
 
  public:
-  Tensor(float* data, std::vector<size_t> shape);
-  Tensor(float* data, std::vector<size_t> shape, Node* node);
-  Tensor(std::vector<size_t> shape);
-  Tensor(py::array_t<float> array);
+  // Constructors
+  Tensor(std::vector<float> data, std::vector<size_t> shape = {},
+         Device device = Device::CPU, bool requires_grad = false);
+  Tensor(std::vector<size_t> shape, Device device = Device::CPU,
+         bool requires_grad = false);
+
+  // Destructor
   ~Tensor();
 
-  void set_node(Node* node);
+  // Accessors
+  float* data() { return data_; }
+  const std::vector<size_t>& shape() const { return shape_; }
+  const std::vector<size_t>& stride() const { return stride_; }
+  size_t size() const {
+    size_t size = 1;
+    for (auto& s : shape_) size *= s;
+    return size;
+  }
+  Device device() const { return device_; }
+  void to_device(Device device);
 
-  static Tensor add(Tensor a, Tensor b);
+  // Autograd
+  void set_requires_grad(bool requires_grad);
+  bool requires_grad() const { return requires_grad_; }
+  AutogradMeta& autograd_meta() const;
+  std::shared_ptr<Tensor> grad() const;
+  void set_grad(std::shared_ptr<Tensor> grad);
+  void backward(std::shared_ptr<Tensor> grad);
 
-  py::array_t<size_t> shape();
+  // Utility
+  void zero_();
+  std::string to_string() const;
 };
 
-// Node for the computation graph
-class Node {
- public:
-  std::function<void()> grad_fn;
-  std::vector<Tensor*> parents;
-  Tensor* tensor = nullptr;
-
-  Node(std::vector<Tensor*> parents, std::function<void()> grad_fn,
-       Tensor* tensor);
-};
 #endif
