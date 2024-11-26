@@ -8,17 +8,18 @@ int main() {
   variable x = TensorFactory::create(
       vector<float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f,
                     11.0f, 12.0f},
-      vector<size_t>{2, 2, 3}, Device::CPU, true);
+      vector<size_t>{2, 2, 3}, Device::GPU, true);
 
   variable y =
-      TensorFactory::randn(vector<size_t>{2, 3, 4}, 0., 1., Device::CPU, true);
-
-  variable z = matmul(x, y);
-  variable w = relu(z) + z;
-  variable l = transpose(w);
+      TensorFactory::randn(vector<size_t>{2, 3, 4}, 0., 1., Device::GPU, true);
 
   cout << "x: " << x->to_string() << endl;
   cout << "y: " << y->to_string() << endl;
+
+  variable z = matmul(x, y);
+  variable w = z + z;
+  variable l = w + w;
+
   cout << "z: " << z->to_string() << endl;
   cout << "w: " << w->to_string() << endl;
   cout << "l: " << l->to_string() << endl;
@@ -26,7 +27,7 @@ int main() {
   variable init_grad_w = make_shared<Tensor>(
       vector<float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f,
                     11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f},
-      vector<size_t>{2, 4, 2}, Device::CPU);
+      vector<size_t>{2, 2, 4}, Device::GPU);
 
   l->backward(init_grad_w);
 
