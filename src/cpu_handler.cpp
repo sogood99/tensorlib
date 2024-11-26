@@ -118,6 +118,33 @@ void CPUHandler::select_idx(float* X, float* Z, std::vector<size_t> x_shape,
   }
 }
 
+void CPUHandler::broadcast(float* X, float* Z,
+                           const std::vector<size_t>& x_shape,
+                           const std::vector<size_t>& z_shape) {
+  size_t x_dims = x_shape.size();
+  size_t z_dims = z_shape.size();
+
+  std::vector<size_t> x_strides = calculate_strides(x_shape);
+  std::vector<size_t> z_strides = calculate_strides(z_shape);
+  size_t total_elements = calculate_size(z_shape);
+
+// Perform broadcasting
+#pragma omp parallel for
+  for (size_t i = 0; i < total_elements; ++i) {
+    size_t x_index = 0, z_index = i;
+
+    for (size_t dim = 0; dim < z_dims; ++dim) {
+      size_t z_coord = z_index / z_strides[dim];
+      z_index %= z_strides[dim];
+
+      size_t x_coord = (x_shape[dim] == 1) ? 0 : z_coord;
+      x_index += x_coord * x_strides[dim];
+    }
+
+    Z[i] = X[x_index];
+  }
+}
+
 // sum a tensor X along an axis and store it in Z
 void CPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
                      size_t axis) {

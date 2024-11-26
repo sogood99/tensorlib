@@ -625,6 +625,60 @@ void ReshapeBackward::apply() {
   }
 }
 
+BroadcastBackward::BroadcastBackward(variable output, variable x) {
+  inputs_.push_back(x);
+  output_ = output;
+
+  name_ = "BroadcastBackward";
+
+  set_next_edges();
+}
+
+void BroadcastBackward::apply() {
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0];
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    float* x_grad = x_grad_tensor->data();
+
+    if (output_grad_tensor->shape().size() != x_grad_tensor->shape().size()) {
+      throw std::runtime_error("Gradient dim mismatch");
+    }
+
+    const std::vector<size_t>&x_shape = x_grad_tensor->shape(),
+          &z_shape = output_grad_tensor->shape(),
+          &x_stride = x_grad_tensor->stride(),
+          &z_stride = output_grad_tensor->stride();
+
+    Device device = x->device();
+
+    if (device == Device::CPU) {
+      size_t ndim = x_shape.size();
+      size_t z_size = output_grad_tensor->size();
+
+      for (size_t i = 0; i < z_size; i++) {
+        size_t x_index = 0, z_index = i;
+
+        for (size_t dim = 0; dim < ndim; ++dim) {
+          size_t z_coord = z_index / z_stride[dim];
+          z_index %= z_stride[dim];
+
+          size_t x_coord = (x_shape[dim] == 1) ? 0 : z_coord;
+          x_index += x_coord * x_stride[dim];
+        }
+
+        x_grad[x_index] += output_grad[i];
+      }
+
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+}
+
 SumBackward::SumBackward(variable output, variable x, size_t axis,
                          float factor) {
   inputs_.push_back(x);

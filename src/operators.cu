@@ -6,9 +6,37 @@
 #include <tensorlib/tensor.cuh>
 #include <tensorlib/utils.hpp>
 
-variable operator+(const variable& x, const variable& y) {
-  check_tensor_shape(x, y);
+variable operator+(variable x, variable y) {
   check_tensor_device(x, y);
+  if (x->shape().size() != y->shape().size()) {
+    throw std::runtime_error("Incompatible shape");
+  }
+  size_t ndim = x->shape().size();
+
+  bool broadcast_x = false, broadcast_y = false;
+  std::vector<size_t> shape;
+  for (int i = 0; i < ndim; ++i) {
+    if (x->shape()[i] != y->shape()[i]) {
+      if (x->shape()[i] == 1) {
+        broadcast_x = true;
+        shape.push_back(y->shape()[i]);
+      } else if (y->shape()[i] == 1) {
+        broadcast_y = true;
+        shape.push_back(x->shape()[i]);
+      } else {
+        throw std::runtime_error("Incompatible shape");
+      }
+    } else {
+      shape.push_back(x->shape()[i]);
+    }
+  }
+
+  if (broadcast_x) {
+    x = broadcast_to(x, shape);
+  }
+  if (broadcast_y) {
+    y = broadcast_to(y, shape);
+  }
 
   bool require_grad = x->requires_grad() || y->requires_grad();
   Device device = x->device();
@@ -28,9 +56,50 @@ variable operator+(const variable& x, const variable& y) {
   return z;
 }
 
-variable operator-(const variable& x, const variable& y) {
-  check_tensor_shape(x, y);
+variable operator+(variable x, float y) {
+  Device device = x->device();
+  // shape is 1 duplicated to the size of x
+  std::shared_ptr<Tensor> y_tensor = std::make_shared<Tensor>(
+      std::vector<float>{y}, std::vector<size_t>(x->shape().size(), 1), device,
+      false);
+  return x + y_tensor;
+}
+
+variable operator+(float x, variable y) { return y + x; }
+
+variable operator-(variable x, variable y) {
   check_tensor_device(x, y);
+  if (x->shape().size() != y->shape().size()) {
+    throw std::runtime_error("Incompatible shape");
+  }
+  size_t ndim = x->shape().size();
+
+  bool broadcast_x = false, broadcast_y = false;
+  std::vector<size_t> shape;
+  for (int i = 0; i < ndim; ++i) {
+    if (x->shape()[i] != y->shape()[i]) {
+      if (x->shape()[i] == 1) {
+        broadcast_x = true;
+        shape.push_back(y->shape()[i]);
+      } else if (y->shape()[i] == 1) {
+        broadcast_y = true;
+        shape.push_back(x->shape()[i]);
+      } else {
+        throw std::runtime_error("Incompatible shape");
+      }
+    } else {
+      shape.push_back(x->shape()[i]);
+    }
+  }
+
+  if (broadcast_x) {
+    x = broadcast_to(x, shape);
+  }
+  if (broadcast_y) {
+    y = broadcast_to(y, shape);
+  }
+
+  std::cout << y->to_string() << std::endl;
 
   bool require_grad = x->requires_grad() || y->requires_grad();
   Device device = x->device();
@@ -50,9 +119,53 @@ variable operator-(const variable& x, const variable& y) {
   return z;
 }
 
-variable operator*(const variable& x, const variable& y) {
-  check_tensor_shape(x, y);
+variable operator-(variable x, float y) {
+  Device device = x->device();
+  std::shared_ptr<Tensor> y_tensor = std::make_shared<Tensor>(
+      std::vector<float>{y}, std::vector<size_t>(x->shape().size(), 1), device,
+      false);
+  return x - y_tensor;
+}
+
+variable operator-(float x, variable y) {
+  Device device = y->device();
+  std::shared_ptr<Tensor> x_tensor = std::make_shared<Tensor>(
+      std::vector<float>{x}, std::vector<size_t>(y->shape().size(), 1), device,
+      false);
+  return x_tensor - y;
+}
+
+variable operator*(variable x, variable y) {
   check_tensor_device(x, y);
+  if (x->shape().size() != y->shape().size()) {
+    throw std::runtime_error("Incompatible shape");
+  }
+  size_t ndim = x->shape().size();
+
+  bool broadcast_x = false, broadcast_y = false;
+  std::vector<size_t> shape;
+  for (int i = 0; i < ndim; ++i) {
+    if (x->shape()[i] != y->shape()[i]) {
+      if (x->shape()[i] == 1) {
+        broadcast_x = true;
+        shape.push_back(y->shape()[i]);
+      } else if (y->shape()[i] == 1) {
+        broadcast_y = true;
+        shape.push_back(x->shape()[i]);
+      } else {
+        throw std::runtime_error("Incompatible shape");
+      }
+    } else {
+      shape.push_back(x->shape()[i]);
+    }
+  }
+
+  if (broadcast_x) {
+    x = broadcast_to(x, shape);
+  }
+  if (broadcast_y) {
+    y = broadcast_to(y, shape);
+  }
 
   bool require_grad = x->requires_grad() || y->requires_grad();
   Device device = x->device();
@@ -72,9 +185,49 @@ variable operator*(const variable& x, const variable& y) {
   return z;
 }
 
-variable operator/(const variable& x, const variable& y) {
-  check_tensor_shape(x, y);
+variable operator*(variable x, float y) {
+  Device device = x->device();
+  std::shared_ptr<Tensor> y_tensor = std::make_shared<Tensor>(
+      std::vector<float>{y}, std::vector<size_t>(x->shape().size(), 1), device,
+      false);
+  return x * y_tensor;
+}
+
+variable operator*(float x, variable y) { return y * x; }
+
+variable operator/(variable x, variable y) {
   check_tensor_device(x, y);
+  if (x->shape().size() != y->shape().size()) {
+    throw std::runtime_error("Incompatible shape");
+  }
+  size_t ndim = x->shape().size();
+
+  bool broadcast_x = false, broadcast_y = false;
+  std::vector<size_t> shape;
+  for (int i = 0; i < ndim; ++i) {
+    if (x->shape()[i] != y->shape()[i]) {
+      if (x->shape()[i] == 1) {
+        broadcast_x = true;
+        shape.push_back(y->shape()[i]);
+      } else if (y->shape()[i] == 1) {
+        broadcast_y = true;
+        shape.push_back(x->shape()[i]);
+      } else {
+        throw std::runtime_error("Incompatible shape");
+      }
+    } else {
+      shape.push_back(x->shape()[i]);
+    }
+  }
+
+  if (broadcast_x) {
+    x = broadcast_to(x, shape);
+  }
+  if (broadcast_y) {
+    y = broadcast_to(y, shape);
+  }
+
+  std::cout << y->to_string() << std::endl;
 
   bool require_grad = x->requires_grad() || y->requires_grad();
   Device device = x->device();
@@ -94,7 +247,23 @@ variable operator/(const variable& x, const variable& y) {
   return z;
 }
 
-variable matmul(const variable& x, const variable& y) {
+variable operator/(variable x, float y) {
+  Device device = x->device();
+  std::shared_ptr<Tensor> y_tensor = std::make_shared<Tensor>(
+      std::vector<float>{y}, std::vector<size_t>(x->shape().size(), 1), device,
+      false);
+  return x / y_tensor;
+}
+
+variable operator/(float x, variable y) {
+  Device device = y->device();
+  std::shared_ptr<Tensor> x_tensor = std::make_shared<Tensor>(
+      std::vector<float>{x}, std::vector<size_t>(y->shape().size(), 1), device,
+      false);
+  return x_tensor / y;
+}
+
+variable matmul(variable x, variable y) {
   check_tensor_device(x, y);
 
   // either 2d or 3d tensor
@@ -150,7 +319,7 @@ variable matmul(const variable& x, const variable& y) {
   return z;
 }
 
-variable transpose(const variable& x) {
+variable transpose(variable x) {
   // check size
   if (x->shape().size() < 2 || x->shape().size() > 3) {
     throw std::runtime_error("Incompatible shape");
@@ -191,7 +360,7 @@ variable transpose(const variable& x) {
   return z;
 }
 
-variable log(const variable& x) {
+variable log(variable x) {
   Device device = x->device();
 
   auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
@@ -209,7 +378,7 @@ variable log(const variable& x) {
   return z;
 }
 
-variable exp(const variable& x) {
+variable exp(variable x) {
   Device device = x->device();
 
   auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
@@ -227,7 +396,7 @@ variable exp(const variable& x) {
   return z;
 }
 
-variable sin(const variable& x) {
+variable sin(variable x) {
   Device device = x->device();
 
   auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
@@ -245,7 +414,7 @@ variable sin(const variable& x) {
   return z;
 }
 
-variable cos(const variable& x) {
+variable cos(variable x) {
   Device device = x->device();
 
   auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
@@ -263,7 +432,7 @@ variable cos(const variable& x) {
   return z;
 }
 
-variable relu(const variable& x) {
+variable relu(variable x) {
   Device device = x->device();
 
   auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
@@ -281,7 +450,7 @@ variable relu(const variable& x) {
   return z;
 }
 
-variable select_idx(const variable& x, size_t index) {
+variable select_idx(variable x, size_t index) {
   Device device = x->device();
 
   if (index >= x->shape()[0]) {
@@ -311,7 +480,7 @@ variable select_idx(const variable& x, size_t index) {
   return z;
 }
 
-variable reshape(const variable& x, std::vector<size_t> shape) {
+variable reshape(variable x, std::vector<size_t> shape) {
   Device device = x->device();
 
   // Check if the new shape is compatible with the old shape
@@ -340,9 +509,28 @@ variable reshape(const variable& x, std::vector<size_t> shape) {
   return z;
 }
 
-variable flatten(const variable& x) { return reshape(x, {x->size()}); }
+variable flatten(variable x) { return reshape(x, {x->size()}); }
 
-variable sum(const variable& x, size_t axis) {
+// Potentially broadcast expand to a larger shape
+variable broadcast_to(variable x, std::vector<size_t> shape) {
+  Device device = x->device();
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::broadcast(x->data(), z->data(), x->shape(), shape);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(std::make_shared<BroadcastBackward>(z, x));
+  }
+
+  return z;
+}
+
+variable sum(variable x, size_t axis) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {
@@ -368,7 +556,7 @@ variable sum(const variable& x, size_t axis) {
   return z;
 }
 
-variable mean(const variable& x, size_t axis) {
+variable mean(variable x, size_t axis) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {
@@ -396,7 +584,7 @@ variable mean(const variable& x, size_t axis) {
   return z;
 }
 
-variable max(const variable& x, size_t axis) {
+variable max(variable x, size_t axis) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {
@@ -424,7 +612,7 @@ variable max(const variable& x, size_t axis) {
   return z;
 }
 
-variable min(const variable& x, size_t axis) {
+variable min(variable x, size_t axis) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {

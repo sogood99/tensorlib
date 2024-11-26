@@ -23,6 +23,8 @@ class CPUHandler {
   static void relu(float* X, float* Y, size_t size);
   static void select_idx(float* X, float* Z, std::vector<size_t> x_shape,
                          size_t idx);
+  static void broadcast(float* X, float* Z, const std::vector<size_t>& x_shape,
+                        const std::vector<size_t>& z_shape);
   static void sum(float* X, float* Z, std::vector<size_t> x_shape, size_t axis);
   static void mean(float* X, float* Z, std::vector<size_t> x_shape,
                    size_t axis);

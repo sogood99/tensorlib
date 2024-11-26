@@ -116,6 +116,12 @@ class ReshapeBackward : public Node {
   void apply() override;
 };
 
+class BroadcastBackward : public Node {
+ public:
+  BroadcastBackward(variable output, variable x);
+  void apply() override;
+};
+
 class SumBackward : public Node {
  public:
   SumBackward(variable output, variable x, size_t axis, float factor = 1.0);
