@@ -33,11 +33,18 @@ PYBIND11_MODULE(tensorlib, m) {
            py::arg("data"), py::arg("device") = Device::CPU,
            py::arg("requires_grad") = false)
       .def("data",
-           [](Tensor& self) {
+           [](variable self) {
+             if (self->device() == Device::GPU) {
+               variable cpu_tensor = self->to_device(Device::CPU);
+               return py::array_t<float>(
+                   cpu_tensor->size(), cpu_tensor->data(),
+                   py::capsule(cpu_tensor->data(), [](void* p) {}));
+             }
              return py::array_t<float>(
-                 self.size(), self.data(),
-                 py::capsule(self.data(), [](void* p) {}));
+                 self->size(), self->data(),
+                 py::capsule(self->data(), [](void* p) {}));
            })
+      .def("item", &Tensor::item)
       .def_property_readonly("shape", &Tensor::shape)
       .def_property_readonly("stride", &Tensor::stride)
       .def("size", &Tensor::size)
