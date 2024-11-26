@@ -18,5 +18,15 @@ which creates a build directory with the .so file, then set the PythonPath:
 ```bash
 export PYTHONPATH=$(pwd)/build:$PYTHONPATH
 ```
+Afterwards, you can use tensorlib by `import tensorlib`, see [example.py](example/example.py).
 
-### C++
+### C++(Cuda)
+
+For any c++ file, simply link the nessesary libraries:
+```sh
+nvcc example/example.cpp -Iinclude/ -Lbuild/ -ltensorlib_cpp -lopenblas -lcudart -lcublas -o example/example
+```
+and then run:
+```sh
+./example/example
+```
