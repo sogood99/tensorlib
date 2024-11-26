@@ -18,10 +18,8 @@ int main() {
       vector<size_t>{2, 3, 4}, device, true);
 
   variable z = matmul(x, y);
-  //   variable w = z + z;
-  variable w =
-      TensorFactory::randn(vector<size_t>{2, 4}, 0.0f, 1.0f, device, true);
-  variable l = min(w, 1);
+  variable w = z + z;
+  variable l = sum(w, 1);
 
   cout << "x: " << x->to_string() << endl;
   cout << "y: " << y->to_string() << endl;

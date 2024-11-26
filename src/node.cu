@@ -657,25 +657,7 @@ void SumBackward::apply() {
 
     if (device == Device::CPU) {
       for (size_t i = 0; i < size; i++) {
-        size_t output_idx = i, input_idx = 0;
-        std::vector<size_t> strides(output_.lock()->shape().size(), 1);
-        for (int j = output_.lock()->shape().size() - 2; j >= 0; --j) {
-          strides[j] = strides[j + 1] * output_.lock()->shape()[j + 1];
-        }
-
-        for (int j = 0; j < x_shape.size(); ++j) {
-          if (j == axis_) continue;
-          size_t stride;
-          if (j < axis_) {
-            stride = strides[j];
-          } else {
-            stride = strides[j - 1];
-          }
-          size_t idx = output_idx / stride;
-
-          input_idx += idx * x_stride[j];
-          output_idx %= stride;
-        }
+        size_t input_idx = calculate_index_after_add_axis(i, axis_, x_shape);
 
         for (size_t j = 0; j < axis_size; j++) {
           x_grad[input_idx] += output_grad[i] * factor_;

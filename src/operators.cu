@@ -300,7 +300,7 @@ variable select_idx(const variable& x, size_t index) {
   if (device == Device::CPU) {
     CPUHandler::select_idx(x->data(), z->data(), x->shape(), index);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::select_idx(x->data(), z->data(), x->shape(), index);
   }
 
   if (x->requires_grad()) {
