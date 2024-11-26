@@ -46,22 +46,23 @@ PYBIND11_MODULE(tensorlib, m) {
       .def_property("requires_grad", &Tensor::requires_grad,
                     &Tensor::set_requires_grad)
       .def_property("grad", &Tensor::grad, &Tensor::set_grad)
-      .def("backward", &Tensor::backward)
+      .def("backward", &Tensor::backward,
+           py::arg("grad") = TensorFactory::ones({1}))
       .def("zero_", &Tensor::zero_)
       .def("__add__", [](variable x, variable y) { return x + y; })
       .def("__add__", [](variable x, float y) { return x + y; })
-      .def("__add__", [](float x, variable y) { return x + y; })
+      .def("__radd__", [](variable x, float y) { return x + y; })
       .def("__sub__", [](variable x, variable y) { return x - y; })
       .def("__sub__", [](variable x, float y) { return x - y; })
-      .def("__sub__", [](float x, variable y) { return x - y; })
+      .def("__rsub__", [](variable y, float x) { return x - y; })
       .def("__mul__", [](variable x, variable y) { return x * y; })
       .def("__mul__", [](variable x, float y) { return x * y; })
-      .def("__mul__", [](float x, variable y) { return x * y; })
+      .def("__rmul__", [](variable y, float x) { return x * y; })
       .def("__matmul__", [](variable x, variable y) { return matmul(x, y); })
-      .def("__rmatmul__", [](variable x, variable y) { return matmul(y, x); })
       .def("__truediv__", [](variable x, variable y) { return x / y; })
       .def("__truediv__", [](variable x, float y) { return x / y; })
-      .def("__truediv__", [](float x, variable y) { return x / y; })
+      .def("__rtruediv__", [](variable y, float x) { return x / y; })
+      .def("__neg__", [](variable x) { return -x; })
       .def("__getitem__", &select_idx)
       .def("__repr__", &Tensor::to_string);
 
@@ -95,8 +96,20 @@ PYBIND11_MODULE(tensorlib, m) {
   m.def("select_idx", &select_idx, "Select index");
   m.def("reshape", &reshape, "Reshape");
   m.def("flatten", &flatten, "Flatten");
-  m.def("sum", &sum, "Sum along axis");
-  m.def("mean", &mean, "Mean along axis");
-  m.def("max", &max, "Max along axis");
-  m.def("min", &min, "Min along axis");
+  m.def(
+      "sum", [](variable x, size_t idx) { return sum(x, idx); },
+      "Sum along axis");
+  m.def("sum", [](variable x) { return sum(x); }, "Sum whole tensor");
+  m.def(
+      "mean", [](variable x, size_t idx) { return mean(x, idx); },
+      "Mean along axis");
+  m.def("mean", [](variable x) { return mean(x); }, "Mean whole tensor");
+  m.def(
+      "max", [](variable x, size_t idx) { return max(x, idx); },
+      "Max along axis");
+  m.def("max", [](variable x) { return max(x); }, "Max whole tensor");
+  m.def(
+      "min", [](variable x, size_t idx) { return min(x, idx); },
+      "Min along axis");
+  m.def("min", [](variable x) { return min(x); }, "Min whole tensor");
 }
