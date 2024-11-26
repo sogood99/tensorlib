@@ -371,7 +371,7 @@ void TransposeBackward::apply() {
     if (device == Device::CPU) {
       CPUHandler::transpose(output_grad, x_grad, B, N, M);
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::transpose(output_grad, x_grad, B, N, M);
     }
   }
 }
