@@ -84,4 +84,7 @@ PYBIND11_MODULE(tensorlib, m) {
   m.def("reshape", &reshape, "Reshape");
   m.def("flatten", &flatten, "Flatten");
   m.def("sum", &sum, "Sum along axis");
+  m.def("mean", &mean, "Mean along axis");
+  m.def("max", &max, "Max along axis");
+  m.def("min", &min, "Min along axis");
 }

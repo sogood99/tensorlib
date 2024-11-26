@@ -118,11 +118,28 @@ class ReshapeBackward : public Node {
 
 class SumBackward : public Node {
  public:
-  SumBackward(variable output, variable x, size_t axis);
+  SumBackward(variable output, variable x, size_t axis, float factor = 1.0);
   void apply() override;
 
  private:
   size_t axis_;
+  float factor_;
+};
+
+// Backward for functions that reduce the dimension of the input into a scalar
+// by selecting a specific index
+// eg. max, min
+class SelectorBackward : public Node {
+ public:
+  SelectorBackward(variable output, variable x, size_t axis,
+                   size_t* index_list);
+  ~SelectorBackward();
+  void apply() override;
+
+ private:
+  size_t axis_;
+  size_t* index_list_;
+  Device device_;
 };
 
 #endif

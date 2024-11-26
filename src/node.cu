@@ -625,10 +625,12 @@ void ReshapeBackward::apply() {
   }
 }
 
-SumBackward::SumBackward(variable output, variable x, size_t axis) {
+SumBackward::SumBackward(variable output, variable x, size_t axis,
+                         float factor) {
   inputs_.push_back(x);
   output_ = output;
   axis_ = axis;
+  factor_ = factor;
 
   name_ = "SumBackward";
 
@@ -676,9 +678,55 @@ void SumBackward::apply() {
         }
 
         for (size_t j = 0; j < axis_size; j++) {
-          x_grad[input_idx] += output_grad[i];
+          x_grad[input_idx] += output_grad[i] * factor_;
           input_idx += x_stride[axis_];
         }
+      }
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+}
+
+SelectorBackward::SelectorBackward(variable output, variable x, size_t axis,
+                                   size_t* index_list) {
+  inputs_.push_back(x);
+  output_ = output;
+  axis_ = axis;
+  index_list_ = index_list;
+  device_ = output->device();
+
+  name_ = "SelectorBackward";
+
+  set_next_edges();
+}
+
+SelectorBackward::~SelectorBackward() {
+  if (device_ == Device::GPU) {
+    cudaFree(index_list_);
+  } else if (device_ == Device::CPU) {
+    delete[] index_list_;
+  }
+}
+
+void SelectorBackward::apply() {
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0];
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    float* x_grad = x_grad_tensor->data();
+    size_t size = output_grad_tensor->size();
+
+    Device device = x->device();
+
+    if (device == Device::CPU) {
+#pragma omp parallel for
+      for (size_t i = 0; i < size; i++) {
+        size_t og_idx = index_list_[i];
+        x_grad[og_idx] += output_grad[i];
       }
     } else if (device == Device::GPU) {
       std::runtime_error("Not implemented for GPU");

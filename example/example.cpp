@@ -4,7 +4,7 @@
 using namespace std;
 
 int main() {
-  Device device = Device::GPU;
+  Device device = Device::CPU;
   // 2d vector
   variable x = TensorFactory::create(
       vector<float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f,
@@ -18,8 +18,10 @@ int main() {
       vector<size_t>{2, 3, 4}, device, true);
 
   variable z = matmul(x, y);
-  variable w = z + z;
-  variable l = transpose(w);
+  //   variable w = z + z;
+  variable w =
+      TensorFactory::randn(vector<size_t>{2, 4}, 0.0f, 1.0f, device, true);
+  variable l = min(w, 1);
 
   cout << "x: " << x->to_string() << endl;
   cout << "y: " << y->to_string() << endl;
@@ -27,12 +29,13 @@ int main() {
   cout << "w: " << w->to_string() << endl;
   cout << "l: " << l->to_string() << endl;
 
-  variable init_grad_w = make_shared<Tensor>(
-      vector<float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 9.0f, 10.0f,
-                    11.0f, 12.0f, 13.0f, 14.0f, 15.0f, 16.0f},
-      vector<size_t>{2, 4, 2}, device);
+  //   variable init_grad_w = make_shared<Tensor>(
+  //       vector<float>{1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f},
+  //       vector<size_t>{2, 4}, device);
+  variable init_grad_l =
+      TensorFactory::randn(l->shape(), 0.0f, 1.0f, device, false);
 
-  l->backward(init_grad_w);
+  l->backward(init_grad_l);
 
   cout << "l grad: " << l->autograd_meta().grad_->to_string() << endl;
   cout << "z grad: " << z->autograd_meta().grad_->to_string() << endl;

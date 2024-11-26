@@ -24,6 +24,12 @@ class CPUHandler {
   static void select_idx(float* X, float* Z, std::vector<size_t> x_shape,
                          size_t idx);
   static void sum(float* X, float* Z, std::vector<size_t> x_shape, size_t axis);
+  static void mean(float* X, float* Z, std::vector<size_t> x_shape,
+                   size_t axis);
+  static size_t* max(float* X, float* Z, std::vector<size_t> x_shape,
+                     size_t axis);
+  static size_t* min(float* X, float* Z, std::vector<size_t> x_shape,
+                     size_t axis);
 };
 
 #endif

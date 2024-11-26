@@ -1,10 +1,10 @@
-#include "tensorlib/cpu_handler.hpp"
-
 #include <cblas.h>
 #include <omp.h>
 
 #include <cmath>
 #include <iostream>
+#include <tensorlib/cpu_handler.hpp>
+#include <tensorlib/utils.hpp>
 
 // add two arrays X and Y of size size
 void CPUHandler::add(float* X, float* Y, float* Z, size_t size) {
@@ -154,4 +154,109 @@ void CPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
 #pragma omp atomic
     Z[output_idx] += X[i];
   }
+}
+
+// mean a tensor X along an axis and store it in Z
+void CPUHandler::mean(float* X, float* Z, std::vector<size_t> x_shape,
+                      size_t axis) {
+  size_t input_size = 1, output_size = 1;
+  for (size_t i = 0; i < x_shape.size(); ++i) {
+    input_size *= x_shape[i];
+    if (i != axis) {
+      output_size *= x_shape[i];
+    }
+  }
+
+  float factor = 1.0f / x_shape[axis];
+
+#pragma omp parallel for
+  for (size_t i = 0; i < output_size; ++i) {
+    Z[i] = 0.0f;
+  }
+
+  std::vector<size_t> x_strides(x_shape.size(), 1);
+  for (size_t i = x_shape.size() - 1; i > 0; --i) {
+    x_strides[i - 1] = x_strides[i] * x_shape[i];
+  }
+
+#pragma omp parallel for
+  for (size_t i = 0; i < input_size; ++i) {
+    size_t output_idx =
+        calculate_index_after_drop_axis(i, axis, x_shape, x_strides);
+#pragma omp atomic
+    Z[output_idx] += X[i] * factor;
+  }
+}
+
+// max a tensor X along an axis and store it in Z, returns the argmax array
+size_t* CPUHandler::max(float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = 1, output_size = 1;
+  for (size_t i = 0; i < x_shape.size(); ++i) {
+    input_size *= x_shape[i];
+    if (i != axis) {
+      output_size *= x_shape[i];
+    }
+  }
+
+  size_t* idx_list = new size_t[output_size];
+
+#pragma omp parallel for
+  for (size_t i = 0; i < output_size; ++i) {
+    Z[i] = -INFINITY;
+  }
+
+  std::vector<size_t> strides(x_shape.size(), 1);
+  for (size_t i = x_shape.size() - 1; i > 0; --i) {
+    strides[i - 1] = strides[i] * x_shape[i];
+  }
+
+#pragma omp parallel for
+  for (size_t i = 0; i < input_size; ++i) {
+    size_t output_idx =
+        calculate_index_after_drop_axis(i, axis, x_shape, strides);
+    std::cout << "i: " << i << " " << "output_idx: " << output_idx << std::endl;
+#pragma omp critical
+    if (X[i] > Z[output_idx]) {
+      Z[output_idx] = X[i];
+      idx_list[output_idx] = i;
+    }
+  }
+  return idx_list;
+}
+
+// min a tensor X along an axis and store it in Z, retunns the argmin array
+size_t* CPUHandler::min(float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = 1, output_size = 1;
+  for (size_t i = 0; i < x_shape.size(); ++i) {
+    input_size *= x_shape[i];
+    if (i != axis) {
+      output_size *= x_shape[i];
+    }
+  }
+
+  size_t* idx_list = new size_t[output_size];
+
+#pragma omp parallel for
+  for (size_t i = 0; i < output_size; ++i) {
+    Z[i] = INFINITY;
+  }
+
+  std::vector<size_t> strides(x_shape.size(), 1);
+  for (size_t i = x_shape.size() - 1; i > 0; --i) {
+    strides[i - 1] = strides[i] * x_shape[i];
+  }
+
+#pragma omp parallel for
+  for (size_t i = 0; i < input_size; ++i) {
+    size_t output_idx =
+        calculate_index_after_drop_axis(i, axis, x_shape, strides);
+#pragma omp critical
+    if (X[i] < Z[output_idx]) {
+      Z[output_idx] = X[i];
+      idx_list[output_idx] = i;
+    }
+  }
+  return idx_list;
 }

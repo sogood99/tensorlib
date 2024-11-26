@@ -367,3 +367,87 @@ variable sum(const variable& x, size_t axis) {
 
   return z;
 }
+
+variable mean(const variable& x, size_t axis) {
+  Device device = x->device();
+
+  if (axis >= x->shape().size()) {
+    throw std::runtime_error("Axis out of bounds");
+  }
+
+  // new shape
+  size_t axis_size = x->shape()[axis];
+  std::vector<size_t> shape = x->shape();
+  shape.erase(shape.begin() + axis);
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::mean(x->data(), z->data(), x->shape(), axis);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(
+        std::make_shared<SumBackward>(z, x, axis, 1. / axis_size));
+  }
+
+  return z;
+}
+
+variable max(const variable& x, size_t axis) {
+  Device device = x->device();
+
+  if (axis >= x->shape().size()) {
+    throw std::runtime_error("Axis out of bounds");
+  }
+
+  // new shape
+  std::vector<size_t> shape = x->shape();
+  shape.erase(shape.begin() + axis);
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
+
+  size_t* idx_list = nullptr;
+  if (device == Device::CPU) {
+    idx_list = CPUHandler::max(x->data(), z->data(), x->shape(), axis);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(
+        std::make_shared<SelectorBackward>(z, x, axis, idx_list));
+  }
+
+  return z;
+}
+
+variable min(const variable& x, size_t axis) {
+  Device device = x->device();
+
+  if (axis >= x->shape().size()) {
+    throw std::runtime_error("Axis out of bounds");
+  }
+
+  // new shape
+  std::vector<size_t> shape = x->shape();
+  shape.erase(shape.begin() + axis);
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
+
+  size_t* idx_list = nullptr;
+  if (device == Device::CPU) {
+    idx_list = CPUHandler::min(x->data(), z->data(), x->shape(), axis);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(
+        std::make_shared<SelectorBackward>(z, x, axis, idx_list));
+  }
+
+  return z;
+}

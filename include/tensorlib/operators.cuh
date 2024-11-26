@@ -20,5 +20,8 @@ variable select_idx(const variable& x, size_t index);
 variable reshape(const variable& x, std::vector<size_t> shape);
 variable flatten(const variable& x);
 variable sum(const variable& x, size_t axis);
+variable mean(const variable& x, size_t axis);
+variable max(const variable& x, size_t axis);
+variable min(const variable& x, size_t axis);
 
 #endif

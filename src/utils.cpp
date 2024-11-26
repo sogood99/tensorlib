@@ -15,6 +15,23 @@ size_t convert_to_index(size_t index, variable t) {
   return result;
 }
 
+// calculate index after droping the axis dimension
+size_t calculate_index_after_drop_axis(size_t index, size_t axis,
+                                       const std::vector<size_t>& shape,
+                                       const std::vector<size_t>& strides) {
+  size_t idx = index;
+  size_t output_idx = 0;
+  for (size_t j = 0; j < shape.size(); ++j) {
+    if (j < axis) {
+      output_idx += (idx / strides[j]) * strides[j] / shape[axis];
+    } else if (j > axis) {
+      output_idx += (idx / strides[j]) * strides[j];
+    }
+    idx %= strides[j];
+  }
+  return output_idx;
+}
+
 size_t calculate_size(const std::vector<size_t>& shape) {
   size_t size = 1;
   for (auto& s : shape) {
