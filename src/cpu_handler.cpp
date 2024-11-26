@@ -121,36 +121,20 @@ void CPUHandler::select_idx(float* X, float* Z, std::vector<size_t> x_shape,
 // sum a tensor X along an axis and store it in Z
 void CPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
                      size_t axis) {
-  size_t input_size = 1, output_size = 1;
-  for (size_t i = 0; i < x_shape.size(); ++i) {
-    input_size *= x_shape[i];
-    if (i != axis) {
-      output_size *= x_shape[i];
-    }
-  }
+  size_t input_size = calculate_size(x_shape),
+         output_size = input_size / x_shape[axis];
 
 #pragma omp parallel for
   for (size_t i = 0; i < output_size; ++i) {
     Z[i] = 0.0f;
   }
 
-  std::vector<size_t> strides(x_shape.size(), 1);
-  for (size_t i = x_shape.size() - 1; i > 0; --i) {
-    strides[i - 1] = strides[i] * x_shape[i];
-  }
+  std::vector<size_t> strides = calculate_strides(x_shape);
 
 #pragma omp parallel for
   for (size_t i = 0; i < input_size; ++i) {
-    size_t idx = i;
-    size_t output_idx = 0;
-    for (size_t j = 0; j < x_shape.size(); ++j) {
-      if (j < axis) {
-        output_idx += (idx / strides[j]) * strides[j] / x_shape[axis];
-      } else if (j > axis) {
-        output_idx += (idx / strides[j]) * strides[j];
-      }
-      idx %= strides[j];
-    }
+    size_t output_idx =
+        calculate_index_after_drop_axis(i, axis, x_shape, strides);
 #pragma omp atomic
     Z[output_idx] += X[i];
   }
@@ -159,13 +143,8 @@ void CPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
 // mean a tensor X along an axis and store it in Z
 void CPUHandler::mean(float* X, float* Z, std::vector<size_t> x_shape,
                       size_t axis) {
-  size_t input_size = 1, output_size = 1;
-  for (size_t i = 0; i < x_shape.size(); ++i) {
-    input_size *= x_shape[i];
-    if (i != axis) {
-      output_size *= x_shape[i];
-    }
-  }
+  size_t input_size = calculate_size(x_shape),
+         output_size = input_size / x_shape[axis];
 
   float factor = 1.0f / x_shape[axis];
 
@@ -173,11 +152,7 @@ void CPUHandler::mean(float* X, float* Z, std::vector<size_t> x_shape,
   for (size_t i = 0; i < output_size; ++i) {
     Z[i] = 0.0f;
   }
-
-  std::vector<size_t> x_strides(x_shape.size(), 1);
-  for (size_t i = x_shape.size() - 1; i > 0; --i) {
-    x_strides[i - 1] = x_strides[i] * x_shape[i];
-  }
+  std::vector<size_t> x_strides = calculate_strides(x_shape);
 
 #pragma omp parallel for
   for (size_t i = 0; i < input_size; ++i) {
@@ -191,13 +166,8 @@ void CPUHandler::mean(float* X, float* Z, std::vector<size_t> x_shape,
 // max a tensor X along an axis and store it in Z, returns the argmax array
 size_t* CPUHandler::max(float* X, float* Z, std::vector<size_t> x_shape,
                         size_t axis) {
-  size_t input_size = 1, output_size = 1;
-  for (size_t i = 0; i < x_shape.size(); ++i) {
-    input_size *= x_shape[i];
-    if (i != axis) {
-      output_size *= x_shape[i];
-    }
-  }
+  size_t input_size = calculate_size(x_shape),
+         output_size = input_size / x_shape[axis];
 
   size_t* idx_list = new size_t[output_size];
 
@@ -206,10 +176,7 @@ size_t* CPUHandler::max(float* X, float* Z, std::vector<size_t> x_shape,
     Z[i] = -INFINITY;
   }
 
-  std::vector<size_t> strides(x_shape.size(), 1);
-  for (size_t i = x_shape.size() - 1; i > 0; --i) {
-    strides[i - 1] = strides[i] * x_shape[i];
-  }
+  std::vector<size_t> strides = calculate_strides(x_shape);
 
 #pragma omp parallel for
   for (size_t i = 0; i < input_size; ++i) {
@@ -227,13 +194,8 @@ size_t* CPUHandler::max(float* X, float* Z, std::vector<size_t> x_shape,
 // min a tensor X along an axis and store it in Z, retunns the argmin array
 size_t* CPUHandler::min(float* X, float* Z, std::vector<size_t> x_shape,
                         size_t axis) {
-  size_t input_size = 1, output_size = 1;
-  for (size_t i = 0; i < x_shape.size(); ++i) {
-    input_size *= x_shape[i];
-    if (i != axis) {
-      output_size *= x_shape[i];
-    }
-  }
+  size_t input_size = calculate_size(x_shape),
+         output_size = input_size / x_shape[axis];
 
   size_t* idx_list = new size_t[output_size];
 
@@ -242,10 +204,7 @@ size_t* CPUHandler::min(float* X, float* Z, std::vector<size_t> x_shape,
     Z[i] = INFINITY;
   }
 
-  std::vector<size_t> strides(x_shape.size(), 1);
-  for (size_t i = x_shape.size() - 1; i > 0; --i) {
-    strides[i - 1] = strides[i] * x_shape[i];
-  }
+  std::vector<size_t> strides = calculate_strides(x_shape);
 
 #pragma omp parallel for
   for (size_t i = 0; i < input_size; ++i) {

@@ -40,6 +40,14 @@ size_t calculate_size(const std::vector<size_t>& shape) {
   return size;
 }
 
+std::vector<size_t> calculate_strides(const std::vector<size_t>& shape) {
+  std::vector<size_t> strides(shape.size(), 1);
+  for (size_t i = shape.size() - 1; i > 0; --i) {
+    strides[i - 1] = strides[i] * shape[i];
+  }
+  return strides;
+}
+
 void check_tensor_shape(const variable& x, const variable& y) {
   if (x->shape() != y->shape()) {
     std::cerr << "Shape mismatch, x shape: ";
