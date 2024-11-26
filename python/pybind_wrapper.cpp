@@ -57,6 +57,7 @@ PYBIND11_MODULE(tensorlib, m) {
       .def("__truediv__",
            [](const std::shared_ptr<Tensor>& a,
               const std::shared_ptr<Tensor>& b) { return a / b; })
+      .def("__getitem__", &select_idx)
       .def("__repr__", &Tensor::to_string);
 
   // Operators and utility functions

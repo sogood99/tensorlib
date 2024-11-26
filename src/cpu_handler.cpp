@@ -215,7 +215,6 @@ size_t* CPUHandler::max(float* X, float* Z, std::vector<size_t> x_shape,
   for (size_t i = 0; i < input_size; ++i) {
     size_t output_idx =
         calculate_index_after_drop_axis(i, axis, x_shape, strides);
-    std::cout << "i: " << i << " " << "output_idx: " << output_idx << std::endl;
 #pragma omp critical
     if (X[i] > Z[output_idx]) {
       Z[output_idx] = X[i];
