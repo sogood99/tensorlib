@@ -60,6 +60,17 @@ PYBIND11_MODULE(tensorlib, m) {
       .def("__getitem__", &select_idx)
       .def("__repr__", &Tensor::to_string);
 
+  // Create new tensors
+  m.def("randn", &TensorFactory::randn, py::arg("shape"), py::arg("mean") = 0.f,
+        py::arg("std") = 1.f, py::arg("device") = Device::CPU,
+        py::arg("requires_grad") = false, "Create a tensor with random values");
+  m.def("zeros", &TensorFactory::zeros, py::arg("shape"),
+        py::arg("device") = Device::CPU, py::arg("requires_grad") = false,
+        "Create a tensor with zeros");
+  m.def("ones", &TensorFactory::ones, py::arg("shape"),
+        py::arg("device") = Device::CPU, py::arg("requires_grad") = false,
+        "Create a tensor with ones");
+
   // Operators and utility functions
   m.def(
       "add", [](const variable& x, const variable& y) { return x + y; },
