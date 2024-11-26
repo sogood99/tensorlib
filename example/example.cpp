@@ -4,19 +4,20 @@
 using namespace std;
 
 int main() {
-  Device device = Device::CPU;
+  Device device = Device::GPU;
   // 2d vector
   variable x = TensorFactory::create(
-      vector<float>{1.0f, 2.0f, 3.0f, 10.0f, 11.0f, 12.0f},
-      vector<size_t>{2, 1, 3}, device, true);
+      vector<float>{1.0f, 2.0f, 3.0f, 10.0f, 11.0f, 12.0f, 20.0f, 21.0f, 22.0f,
+                    30.0f, 31.0f, 32.0f},
+      vector<size_t>{2, 2, 3}, device, true);
 
   variable y =
-      TensorFactory::create(vector<float>{1.f, -2.f, -5.f, 3.f, 2.f, 1.f},
+      TensorFactory::create(vector<float>{1.f, -2.f, 5.f, 3.f, 2.f, 1.f},
                             vector<size_t>{2, 3, 1}, device, true);
 
   variable z = matmul(x, y);
-  variable w = z + z;
-  variable l = log(w);
+  variable w = log(z);
+  variable l = sum(w, 1);
 
   cout << "x: " << x->to_string() << endl;
   cout << "y: " << y->to_string() << endl;
