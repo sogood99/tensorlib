@@ -25,6 +25,7 @@ class Node : std::enable_shared_from_this<Node> {
   const std::string& name() { return name_; }
   variable_list& inputs() { return inputs_; }
   std::weak_ptr<Tensor> output() { return output_; }
+  void set_name(const std::string& name) { name_ = name; }
 
  protected:
   // output from the last node, used to access last gradient
@@ -149,25 +150,6 @@ class SumAllBackward : public Node {
   float factor_;
 };
 
-class MeanBackward : public Node {
- public:
-  MeanBackward(variable output, variable x, size_t axis);
-  void apply() override;
-
- private:
-  size_t axis_;
-  std::shared_ptr<SumBackward> sum_backward_;
-};
-
-class MeanAllBackward : public Node {
- public:
-  MeanAllBackward(variable output, variable x);
-  void apply() override;
-
- private:
-  std::shared_ptr<SumAllBackward> sum_all_backward_;
-};
-
 // Backward for functions that reduce the dimension of the input into a scalar
 // by selecting a specific index
 // eg. max, min
@@ -181,6 +163,17 @@ class SelectorBackward : public Node {
  private:
   size_t axis_;
   size_t* index_list_;
+  Device device_;
+};
+
+class SelectAllBackward : public Node {
+ public:
+  SelectAllBackward(variable output, variable x, size_t* index);
+  ~SelectAllBackward();
+  void apply() override;
+
+ private:
+  size_t* index_;
   Device device_;
 };
 

@@ -793,34 +793,6 @@ void SumAllBackward::apply() {
   }
 }
 
-MeanBackward::MeanBackward(variable output, variable x, size_t axis) {
-  inputs_.push_back(x);
-  output_ = output;
-  axis_ = axis;
-  size_t axis_size = x->shape()[axis];
-  sum_backward_ = std::shared_ptr<SumBackward>(
-      new SumBackward(output, x, axis, 1.0 / axis_size));
-
-  name_ = "MeanBackward";
-
-  set_next_edges();
-}
-
-void MeanBackward::apply() { sum_backward_->apply(); }
-
-MeanAllBackward::MeanAllBackward(variable output, variable x) {
-  inputs_.push_back(x);
-  output_ = output;
-  sum_all_backward_ = std::shared_ptr<SumAllBackward>(
-      new SumAllBackward(output, x, 1.0 / x->size()));
-
-  name_ = "MeanAllBackward";
-
-  set_next_edges();
-}
-
-void MeanAllBackward::apply() { sum_all_backward_->apply(); }
-
 SelectorBackward::SelectorBackward(variable output, variable x, size_t axis,
                                    size_t* index_list) {
   inputs_.push_back(x);
@@ -861,6 +833,48 @@ void SelectorBackward::apply() {
         size_t og_idx = index_list_[i];
         x_grad[og_idx] += output_grad[i];
       }
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+}
+
+SelectAllBackward::SelectAllBackward(variable output, variable x,
+                                     size_t* index) {
+  inputs_.push_back(x);
+  output_ = output;
+  index_ = index;
+  device_ = output->device();
+
+  name_ = "SelectAllBackward";
+
+  set_next_edges();
+}
+
+SelectAllBackward::~SelectAllBackward() {
+  if (device_ == Device::GPU) {
+    cudaFree(index_);
+  } else if (device_ == Device::CPU) {
+    delete[] index_;
+  }
+}
+
+void SelectAllBackward::apply() {
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0];
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    float* x_grad = x_grad_tensor->data();
+
+    size_t size = output_grad_tensor->size();
+
+    Device device = x->device();
+
+    if (device == Device::CPU) {
+      x_grad[*index_] += output_grad[0];
     } else if (device == Device::GPU) {
       std::runtime_error("Not implemented for GPU");
     }

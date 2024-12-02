@@ -570,7 +570,9 @@ variable mean(variable x, size_t axis, bool keepdims) {
   }
 
   if (x->requires_grad()) {
-    z->autograd_meta().set_grad_fn(std::make_shared<MeanBackward>(z, x, axis));
+    auto grad_fn = std::make_shared<SumBackward>(z, x, axis, 1.0 / axis_size);
+    grad_fn->set_name("MeanBackward");
+    z->autograd_meta().set_grad_fn(grad_fn);
   }
 
   return z;
@@ -598,7 +600,9 @@ variable mean(variable x, bool keepdims) {
   }
 
   if (x->requires_grad()) {
-    z->autograd_meta().set_grad_fn(std::make_shared<MeanAllBackward>(z, x));
+    auto grad_fn = std::make_shared<SumAllBackward>(z, x, 1.0 / x->size());
+    grad_fn->set_name("MeanAllBackward");
+    z->autograd_meta().set_grad_fn(grad_fn);
   }
 
   return z;
@@ -629,25 +633,43 @@ variable max(variable x, size_t axis, bool keepdims) {
   }
 
   if (x->requires_grad()) {
-    z->autograd_meta().set_grad_fn(
-        std::make_shared<SelectorBackward>(z, x, axis, idx_list));
+    auto grad_fn = std::make_shared<SelectorBackward>(z, x, axis, idx_list);
+    grad_fn->set_name("MaxBackward");
+    z->autograd_meta().set_grad_fn(grad_fn);
   }
 
   return z;
 }
 
 variable max(variable x, bool keepdims) {
-  if (!keepdims) {
-    while (x->shape().size() > 1) {
-      x = max(x, 0, false);
+  Device device = x->device();
+
+  std::vector<size_t> shape;
+  if (keepdims) {
+    shape = x->shape();
+    for (auto& s : shape) {
+      s = 1;
     }
-    return max(x, 0, keepdims);
   } else {
-    for (size_t i = 0; i < x->shape().size(); i++) {
-      x = max(x, i, true);
-    }
-    return x;
+    shape.push_back(1);
   }
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
+
+  size_t* index = nullptr;
+  if (device == Device::CPU) {
+    index = CPUHandler::max(x->data(), z->data(), x->size());
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    auto grad_fn = std::make_shared<SelectAllBackward>(z, x, index);
+    grad_fn->set_name("MaxAllBackward");
+    z->autograd_meta().set_grad_fn(grad_fn);
+  }
+
+  return z;
 }
 
 variable min(variable x, size_t axis, bool keepdims) {
@@ -675,23 +697,41 @@ variable min(variable x, size_t axis, bool keepdims) {
   }
 
   if (x->requires_grad()) {
-    z->autograd_meta().set_grad_fn(
-        std::make_shared<SelectorBackward>(z, x, axis, idx_list));
+    auto grad_fn = std::make_shared<SelectorBackward>(z, x, axis, idx_list);
+    grad_fn->set_name("MinBackward");
+    z->autograd_meta().set_grad_fn(grad_fn);
   }
 
   return z;
 }
 
 variable min(variable x, bool keepdims) {
-  if (!keepdims) {
-    while (x->shape().size() > 1) {
-      x = min(x, 0, false);
+  Device device = x->device();
+
+  std::vector<size_t> shape;
+  if (keepdims) {
+    shape = x->shape();
+    for (auto& s : shape) {
+      s = 1;
     }
-    return min(x, 0, keepdims);
   } else {
-    for (size_t i = 0; i < x->shape().size(); i++) {
-      x = min(x, i, true);
-    }
-    return x;
+    shape.push_back(1);
   }
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
+
+  size_t* index = nullptr;
+  if (device == Device::CPU) {
+    index = CPUHandler::min(x->data(), z->data(), x->size());
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    auto grad_fn = std::make_shared<SelectAllBackward>(z, x, index);
+    grad_fn->set_name("MinAllBackward");
+    z->autograd_meta().set_grad_fn(grad_fn);
+  }
+
+  return z;
 }

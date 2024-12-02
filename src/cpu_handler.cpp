@@ -240,6 +240,28 @@ size_t* CPUHandler::max(float* X, float* Z, std::vector<size_t> x_shape,
   return idx_list;
 }
 
+// max all elements of a tensor X
+size_t* CPUHandler::max(float* X, float* Z, size_t size) {
+  float max_val = -INFINITY;
+  size_t max_idx = 0;
+
+#pragma omp parallel for
+  for (size_t i = 0; i < size; ++i) {
+    if (X[i] > max_val) {
+#pragma omp critical
+      if (X[i] > max_val) {
+        max_val = X[i];
+        max_idx = i;
+      }
+    }
+  }
+
+  *Z = max_val;
+  size_t* idx_list = new size_t[1];
+  idx_list[0] = max_idx;
+  return idx_list;
+}
+
 // min a tensor X along an axis and store it in Z, retunns the argmin array
 size_t* CPUHandler::min(float* X, float* Z, std::vector<size_t> x_shape,
                         size_t axis) {
@@ -262,6 +284,28 @@ size_t* CPUHandler::min(float* X, float* Z, std::vector<size_t> x_shape,
       idx_list[output_idx] = i;
     }
   }
+  return idx_list;
+}
+
+// min all elements of a tensor X
+size_t* CPUHandler::min(float* X, float* Z, size_t size) {
+  float min_val = INFINITY;
+  size_t min_idx = 0;
+
+#pragma omp parallel for
+  for (size_t i = 0; i < size; ++i) {
+    if (X[i] < min_val) {
+#pragma omp critical
+      if (X[i] < min_val) {
+        min_val = X[i];
+        min_idx = i;
+      }
+    }
+  }
+
+  *Z = min_val;
+  size_t* idx_list = new size_t[1];
+  idx_list[0] = min_idx;
   return idx_list;
 }
 

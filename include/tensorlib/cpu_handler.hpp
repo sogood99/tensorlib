@@ -33,8 +33,10 @@ class CPUHandler {
   static void mean(float* X, float* Z, size_t size);
   static size_t* max(float* X, float* Z, std::vector<size_t> x_shape,
                      size_t axis);
+  static size_t* max(float* X, float* Z, size_t size);
   static size_t* min(float* X, float* Z, std::vector<size_t> x_shape,
                      size_t axis);
+  static size_t* min(float* X, float* Z, size_t size);
   static void dot(float* X, float* Y, float* Z, size_t size);
 };
 
