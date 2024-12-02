@@ -116,11 +116,10 @@ void SubBackward::apply() {
     Device device = y->device();
 
     if (device == Device::CPU) {
-      CPUHandler::sub(output_grad, y_grad, y_grad, y_grad_tensor->size());
+      CPUHandler::sub(y_grad, output_grad, y_grad, y_grad_tensor->size());
     } else if (device == Device::GPU) {
       // Gradient for y with subtraction
-      float alpha = -1.0f;
-      GPUHandler::axpy(output_grad, y_grad, alpha, y_grad_tensor->size());
+      GPUHandler::axpy(output_grad, y_grad, -1.f, y_grad_tensor->size());
     }
   }
 }
@@ -725,6 +724,68 @@ void SumBackward::apply() {
     }
   }
 }
+
+SumAllBackward::SumAllBackward(variable output, variable x, float factor) {
+  inputs_.push_back(x);
+  output_ = output;
+  factor_ = factor;
+
+  name_ = "SumAllBackward";
+
+  set_next_edges();
+}
+
+void SumAllBackward::apply() {
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0];
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    float* x_grad = x_grad_tensor->data();
+
+    size_t size = x_grad_tensor->size();
+
+    Device device = x->device();
+
+    if (device == Device::CPU) {
+      for (size_t i = 0; i < size; i++) {
+        x_grad[i] += output_grad[0] * factor_;
+      }
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+}
+
+MeanBackward::MeanBackward(variable output, variable x, size_t axis) {
+  inputs_.push_back(x);
+  output_ = output;
+  axis_ = axis;
+  size_t axis_size = x->shape()[axis];
+  sum_backward_ = std::shared_ptr<SumBackward>(
+      new SumBackward(output, x, axis, 1.0 / axis_size));
+
+  name_ = "MeanBackward";
+
+  set_next_edges();
+}
+
+void MeanBackward::apply() { sum_backward_->apply(); }
+
+MeanAllBackward::MeanAllBackward(variable output, variable x) {
+  inputs_.push_back(x);
+  output_ = output;
+  sum_all_backward_ = std::shared_ptr<SumAllBackward>(
+      new SumAllBackward(output, x, 1.0 / x->size()));
+
+  name_ = "MeanAllBackward";
+
+  set_next_edges();
+}
+
+void MeanAllBackward::apply() { sum_all_backward_->apply(); }
 
 SelectorBackward::SelectorBackward(variable output, variable x, size_t axis,
                                    size_t* index_list) {

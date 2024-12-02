@@ -490,10 +490,22 @@ variable sum(variable x, size_t axis) {
 }
 
 variable sum(variable x) {
-  while (x->shape().size() > 1) {
-    x = sum(x, 0);
+  Device device = x->device();
+
+  auto z = std::make_shared<Tensor>(std::vector<size_t>{1}, device,
+                                    x->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::sum(x->data(), z->data(), x->shape(), 0);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
   }
-  return sum(x, 0);
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(std::make_shared<SumAllBackward>(z, x));
+  }
+
+  return z;
 }
 
 variable mean(variable x, size_t axis) {
@@ -521,18 +533,29 @@ variable mean(variable x, size_t axis) {
   }
 
   if (x->requires_grad()) {
-    z->autograd_meta().set_grad_fn(
-        std::make_shared<SumBackward>(z, x, axis, 1. / axis_size));
+    z->autograd_meta().set_grad_fn(std::make_shared<MeanBackward>(z, x, axis));
   }
 
   return z;
 }
 
 variable mean(variable x) {
-  while (x->shape().size() > 1) {
-    x = mean(x, 0);
+  Device device = x->device();
+
+  auto z = std::make_shared<Tensor>(std::vector<size_t>{1}, device,
+                                    x->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::mean(x->data(), z->data(), x->size());
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
   }
-  return mean(x, 0);
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(std::make_shared<MeanAllBackward>(z, x));
+  }
+
+  return z;
 }
 
 variable max(variable x, size_t axis) {

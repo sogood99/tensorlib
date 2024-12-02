@@ -26,8 +26,10 @@ class CPUHandler {
   static void broadcast(float* X, float* Z, const std::vector<size_t>& x_shape,
                         const std::vector<size_t>& z_shape);
   static void sum(float* X, float* Z, std::vector<size_t> x_shape, size_t axis);
+  static void sum(float* X, float* Z, size_t size);
   static void mean(float* X, float* Z, std::vector<size_t> x_shape,
                    size_t axis);
+  static void mean(float* X, float* Z, size_t size);
   static size_t* max(float* X, float* Z, std::vector<size_t> x_shape,
                      size_t axis);
   static size_t* min(float* X, float* Z, std::vector<size_t> x_shape,

@@ -7,12 +7,14 @@
 #include <tensorlib/utils.hpp>
 
 // add two arrays X and Y of size size
+// Z = X + Y
 void CPUHandler::add(float* X, float* Y, float* Z, size_t size) {
   cblas_scopy(size, X, 1, Z, 1);
   cblas_saxpy(size, 1.0f, Y, 1, Z, 1);
 }
 
 // subtract two arrays X and Y of size size
+// Z = X - Y
 void CPUHandler::sub(float* X, float* Y, float* Z, size_t size) {
   cblas_scopy(size, X, 1, Z, 1);
   cblas_saxpy(size, -1.0f, Y, 1, Z, 1);
@@ -164,6 +166,16 @@ void CPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
   }
 }
 
+// sum all elements of a tensor X
+void CPUHandler::sum(float* X, float* Z, size_t size) {
+  float sum = 0.0f;
+#pragma omp parallel for reduction(+ : sum)
+  for (size_t i = 0; i < size; ++i) {
+    sum += X[i];
+  }
+  *Z = sum;
+}
+
 // mean a tensor X along an axis and store it in Z
 void CPUHandler::mean(float* X, float* Z, std::vector<size_t> x_shape,
                       size_t axis) {
@@ -182,6 +194,17 @@ void CPUHandler::mean(float* X, float* Z, std::vector<size_t> x_shape,
 #pragma omp atomic
     Z[output_idx] += X[i] * factor;
   }
+}
+
+// mean all elements of a tensor X
+void CPUHandler::mean(float* X, float* Z, size_t size) {
+  float sum = 0.0f;
+
+#pragma omp parallel for reduction(+ : sum)
+  for (size_t i = 0; i < size; ++i) {
+    sum += X[i];
+  }
+  *Z = sum / size;
 }
 
 // max a tensor X along an axis and store it in Z, returns the argmax array
