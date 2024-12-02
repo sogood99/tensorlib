@@ -61,6 +61,12 @@ class DivBackward : public Node {
   void apply() override;
 };
 
+class NegateBackward : public Node {
+ public:
+  NegateBackward(variable output, variable x);
+  void apply() override;
+};
+
 class MatmulBackward : public Node {
  public:
   MatmulBackward(variable output, variable x, variable y);
@@ -139,7 +145,7 @@ class SumAllBackward : public Node {
   SumAllBackward(variable output, variable x, float factor = 1.0);
   void apply() override;
 
-private:
+ private:
   float factor_;
 };
 
@@ -158,7 +164,7 @@ class MeanAllBackward : public Node {
   MeanAllBackward(variable output, variable x);
   void apply() override;
 
-  private:
+ private:
   std::shared_ptr<SumAllBackward> sum_all_backward_;
 };
 

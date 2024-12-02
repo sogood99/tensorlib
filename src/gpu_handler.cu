@@ -55,6 +55,15 @@ void GPUHandler::divide(const float* x, const float* y, float* z, size_t size) {
   checkCudaErrors(cudaDeviceSynchronize());
 }
 
+void GPUHandler::negate(const float* x, float* y, size_t size) {
+  cublasHandle_t handle = getInstance().getHandle();
+  float alpha = -1.0f;
+
+  checkCudaErrors(
+      cudaMemcpy(y, x, size * sizeof(float), cudaMemcpyDeviceToDevice));
+  checkCublasErrors(cublasSscal(handle, size, &alpha, y, 1));
+}
+
 // helper method for SubBackward
 void GPUHandler::axpy(const float* x, float* y, float alpha, size_t size) {
   cublasHandle_t handle = getInstance().getHandle();

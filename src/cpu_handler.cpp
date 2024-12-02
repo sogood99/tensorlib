@@ -36,6 +36,14 @@ void CPUHandler::div(float* X, float* Y, float* Z, size_t size) {
   }
 }
 
+// negate an array X of size size
+void CPUHandler::negate(float* X, float* Z, size_t size) {
+#pragma omp parallel for
+  for (size_t i = 0; i < size; ++i) {
+    Z[i] = -X[i];
+  }
+}
+
 // transpose a matrix of shape (B, M, N) to (B, N, M)
 void CPUHandler::transpose(float* X, float* Y, size_t B, size_t M, size_t N) {
   for (size_t b = 0; b < B; ++b) {

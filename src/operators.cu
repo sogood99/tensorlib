@@ -194,7 +194,22 @@ variable operator/(float x, variable y) {
   return x_tensor / y;
 }
 
-variable operator-(variable x) { return 0.f - x; }
+variable operator-(variable x) {
+  Device device = x->device();
+  auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::negate(x->data(), z->data(), x->size());
+  } else if (device == Device::GPU) {
+    GPUHandler::negate(x->data(), z->data(), x->size());
+  }
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(std::make_shared<NegateBackward>(z, x));
+  }
+
+  return z;
+}
 
 variable matmul(variable x, variable y) {
   check_tensor_device(x, y);

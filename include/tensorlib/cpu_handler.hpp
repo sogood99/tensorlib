@@ -12,6 +12,7 @@ class CPUHandler {
   static void sub(float* X, float* Y, float* Z, size_t size);
   static void mul(float* X, float* Y, float* Z, size_t size);
   static void div(float* X, float* Y, float* Z, size_t size);
+  static void negate(float* X, float* Z, size_t size);
   static void transpose(float* X, float* Y, size_t B, size_t M, size_t N);
   static void matmul(float* X, float* Y, float* Z, size_t B, size_t M, size_t K,
                      size_t N, bool transpose_X = false,

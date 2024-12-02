@@ -249,6 +249,40 @@ void DivBackward::apply() {
   }
 }
 
+NegateBackward::NegateBackward(variable output, variable x) {
+  inputs_.push_back(x);
+  output_ = output;
+
+  name_ = "NegateBackward";
+
+  set_next_edges();
+}
+
+void NegateBackward::apply() {
+  // The gradient of the negation is -1
+  // check last_gradient has same size as inputs
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0];
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    check_tensor_shape(x_grad_tensor, output_grad_tensor);
+
+    float* x_grad = x_grad_tensor->data();
+    Device device = x->device();
+
+    if (device == Device::CPU) {
+      for (size_t i = 0; i < x_grad_tensor->size(); i++) {
+        x_grad[i] -= output_grad[i];
+      }
+    } else if (device == Device::GPU) {
+      GPUHandler::axpy(x_grad, output_grad, -1.0, x_grad_tensor->size());
+    }
+  }
+}
+
 MatmulBackward::MatmulBackward(variable output, variable x, variable y) {
   inputs_.push_back(x);
   inputs_.push_back(y);
