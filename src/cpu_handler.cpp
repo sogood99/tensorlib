@@ -108,6 +108,14 @@ void CPUHandler::relu(float* X, float* Y, size_t size) {
   }
 }
 
+// element-wise sigmoid of X
+void CPUHandler::sigmoid(float* X, float* Y, size_t size) {
+#pragma omp parallel for
+  for (size_t i = 0; i < size; ++i) {
+    Y[i] = 1.0f / (1.0f + std::exp(-X[i]));
+  }
+}
+
 // select a row from a tensor X of shape x_shape and
 // store it in Z
 void CPUHandler::select_idx(float* X, float* Z, std::vector<size_t> x_shape,

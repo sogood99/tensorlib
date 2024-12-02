@@ -110,6 +110,12 @@ class ReluBackward : public Node {
   void apply() override;
 };
 
+class SigmoidBackward : public Node {
+ public:
+  SigmoidBackward(variable output, variable x);
+  void apply() override;
+};
+
 class SelectBackward : public Node {
  public:
   SelectBackward(variable output, variable x, size_t index);

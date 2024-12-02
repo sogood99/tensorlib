@@ -100,6 +100,7 @@ PYBIND11_MODULE(tensorlib, m) {
   m.def("cos", [](variable x) { return cos(x); }, "Exponential");
   m.def("transpose", &transpose, "Transpose");
   m.def("relu", &relu, "ReLU");
+  m.def("sigmoid", &sigmoid, "Sigmoid");
   m.def("select_idx", &select_idx, "Select index");
   m.def("reshape", &reshape, "Reshape");
   m.def("flatten", &flatten, "Flatten");

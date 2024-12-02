@@ -398,6 +398,24 @@ variable relu(variable x) {
   return z;
 }
 
+variable sigmoid(variable x) {
+  Device device = x->device();
+
+  auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::sigmoid(x->data(), z->data(), x->size());
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(std::make_shared<SigmoidBackward>(z, x));
+  }
+
+  return z;
+}
+
 variable select_idx(variable x, size_t index) {
   Device device = x->device();
 

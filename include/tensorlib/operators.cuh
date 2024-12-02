@@ -25,6 +25,7 @@ variable exp(variable x);
 variable sin(variable x);
 variable cos(variable x);
 variable relu(variable x);
+variable sigmoid(variable x);
 variable select_idx(variable x, size_t index);
 variable reshape(variable x, std::vector<size_t> shape);
 variable flatten(variable x);

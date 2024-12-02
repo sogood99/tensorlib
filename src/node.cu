@@ -580,6 +580,41 @@ void ReluBackward::apply() {
   }
 }
 
+SigmoidBackward::SigmoidBackward(variable output, variable x) {
+  inputs_.push_back(x);
+  output_ = output;
+
+  name_ = "SigmoidBackward";
+
+  set_next_edges();
+}
+
+void SigmoidBackward::apply() {
+  // The gradient of the sigmoid is sigmoid(x) * (1 - sigmoid(x))
+  // check last_gradient has same size as inputs
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0];
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    check_tensor_shape(x_grad_tensor, output_grad_tensor);
+
+    float* x_grad = x_grad_tensor->data();
+    Device device = x->device();
+
+    if (device == Device::CPU) {
+      for (size_t i = 0; i < x_grad_tensor->size(); i++) {
+        float sigmoid_x = output_.lock()->data()[i];
+        x_grad[i] += output_grad[i] * sigmoid_x * (1 - sigmoid_x);
+      }
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+}
+
 SelectBackward::SelectBackward(variable output, variable x, size_t index) {
   inputs_.push_back(x);
   output_ = output;
