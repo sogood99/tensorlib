@@ -38,13 +38,9 @@ W2 = tl.randn([hidden_size, output_size], requires_grad=True)
 b2 = tl.zeros([output_size], requires_grad=True)
 
 
-def sigmoid(x):
-    return 1.0 / (1.0 + tl.exp(-x))
-
-
 def forward(X):
     hidden = tl.relu(X @ W1 + b1)
-    output = sigmoid(hidden @ W2 + b2)
+    output = tl.sigmoid(hidden @ W2 + b2)
     return output
 
 
