@@ -44,10 +44,7 @@ def sigmoid(x):
 
 def forward(X):
     hidden = tl.relu(X @ W1 + b1)
-    # print(hidden.shape)
     output = sigmoid(hidden @ W2 + b2)
-    # print(output.shape)
-    # print("Output:", output)
     return output
 
 

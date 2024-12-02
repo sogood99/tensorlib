@@ -29,13 +29,13 @@ variable select_idx(variable x, size_t index);
 variable reshape(variable x, std::vector<size_t> shape);
 variable flatten(variable x);
 variable broadcast_to(variable x, std::vector<size_t> shape);
-variable sum(variable x, size_t axis);
-variable sum(variable x);
-variable mean(variable x, size_t axis);
-variable mean(variable x);
-variable max(variable x, size_t axis);
-variable max(variable x);
-variable min(variable x, size_t axis);
-variable min(variable x);
+variable sum(variable x, size_t axis, bool keepdims = false);
+variable sum(variable x, bool keepdims = false);
+variable mean(variable x, size_t axis, bool keepdims = false);
+variable mean(variable x, bool keepdims = false);
+variable max(variable x, size_t axis, bool keepdims = false);
+variable max(variable x, bool keepdims = false);
+variable min(variable x, size_t axis, bool keepdims = false);
+variable min(variable x, bool keepdims = false);
 
 #endif

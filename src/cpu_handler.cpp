@@ -256,3 +256,8 @@ size_t* CPUHandler::min(float* X, float* Z, std::vector<size_t> x_shape,
   }
   return idx_list;
 }
+
+// dot product of two arrays X and Y of size size
+void CPUHandler::dot(float* X, float* Y, float* Z, size_t size) {
+  *Z = cblas_sdot(size, X, 1, Y, 1);
+}

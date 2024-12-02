@@ -463,7 +463,7 @@ variable broadcast_to(variable x, std::vector<size_t> shape) {
   return z;
 }
 
-variable sum(variable x, size_t axis) {
+variable sum(variable x, size_t axis, bool keepdims) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {
@@ -472,7 +472,15 @@ variable sum(variable x, size_t axis) {
 
   // new shape
   std::vector<size_t> shape = x->shape();
-  shape.erase(shape.begin() + axis);
+  if (!keepdims) {
+    shape.erase(shape.begin() + axis);
+  } else {
+    shape[axis] = 1;
+  }
+
+  if (shape.size() == 0) {
+    shape.push_back(1);
+  }
 
   auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
 
@@ -489,14 +497,23 @@ variable sum(variable x, size_t axis) {
   return z;
 }
 
-variable sum(variable x) {
+variable sum(variable x, bool keepdims) {
   Device device = x->device();
 
-  auto z = std::make_shared<Tensor>(std::vector<size_t>{1}, device,
-                                    x->requires_grad());
+  std::vector<size_t> shape;
+  if (keepdims) {
+    shape = x->shape();
+    for (auto& s : shape) {
+      s = 1;
+    }
+  } else {
+    shape.push_back(1);
+  }
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
 
   if (device == Device::CPU) {
-    CPUHandler::sum(x->data(), z->data(), x->shape(), 0);
+    CPUHandler::sum(x->data(), z->data(), x->size());
   } else if (device == Device::GPU) {
     throw std::runtime_error("Not implemented for GPU");
   }
@@ -508,7 +525,7 @@ variable sum(variable x) {
   return z;
 }
 
-variable mean(variable x, size_t axis) {
+variable mean(variable x, size_t axis, bool keepdims) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {
@@ -518,7 +535,12 @@ variable mean(variable x, size_t axis) {
   // new shape
   size_t axis_size = x->shape()[axis];
   std::vector<size_t> shape = x->shape();
-  shape.erase(shape.begin() + axis);
+
+  if (!keepdims) {
+    shape.erase(shape.begin() + axis);
+  } else {
+    shape[axis] = 1;
+  }
 
   if (shape.size() == 0) {
     shape.push_back(1);
@@ -539,11 +561,20 @@ variable mean(variable x, size_t axis) {
   return z;
 }
 
-variable mean(variable x) {
+variable mean(variable x, bool keepdims) {
   Device device = x->device();
 
-  auto z = std::make_shared<Tensor>(std::vector<size_t>{1}, device,
-                                    x->requires_grad());
+  std::vector<size_t> shape;
+  if (keepdims) {
+    shape = x->shape();
+    for (auto& s : shape) {
+      s = 1;
+    }
+  } else {
+    shape.push_back(1);
+  }
+
+  auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
 
   if (device == Device::CPU) {
     CPUHandler::mean(x->data(), z->data(), x->size());
@@ -558,7 +589,7 @@ variable mean(variable x) {
   return z;
 }
 
-variable max(variable x, size_t axis) {
+variable max(variable x, size_t axis, bool keepdims) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {
@@ -567,7 +598,11 @@ variable max(variable x, size_t axis) {
 
   // new shape
   std::vector<size_t> shape = x->shape();
-  shape.erase(shape.begin() + axis);
+  if (!keepdims) {
+    shape.erase(shape.begin() + axis);
+  } else {
+    shape[axis] = 1;
+  }
 
   auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
 
@@ -586,14 +621,21 @@ variable max(variable x, size_t axis) {
   return z;
 }
 
-variable max(variable x) {
-  while (x->shape().size() > 1) {
-    x = max(x, 0);
+variable max(variable x, bool keepdims) {
+  if (!keepdims) {
+    while (x->shape().size() > 1) {
+      x = max(x, 0, false);
+    }
+    return max(x, 0, keepdims);
+  } else {
+    for (size_t i = 0; i < x->shape().size(); i++) {
+      x = max(x, i, true);
+    }
+    return x;
   }
-  return max(x, 0);
 }
 
-variable min(variable x, size_t axis) {
+variable min(variable x, size_t axis, bool keepdims) {
   Device device = x->device();
 
   if (axis >= x->shape().size()) {
@@ -602,7 +644,11 @@ variable min(variable x, size_t axis) {
 
   // new shape
   std::vector<size_t> shape = x->shape();
-  shape.erase(shape.begin() + axis);
+  if (!keepdims) {
+    shape.erase(shape.begin() + axis);
+  } else {
+    shape[axis] = 1;
+  }
 
   auto z = std::make_shared<Tensor>(shape, device, x->requires_grad());
 
@@ -621,9 +667,16 @@ variable min(variable x, size_t axis) {
   return z;
 }
 
-variable min(variable x) {
-  while (x->shape().size() > 1) {
-    x = min(x, 0);
+variable min(variable x, bool keepdims) {
+  if (!keepdims) {
+    while (x->shape().size() > 1) {
+      x = min(x, 0, false);
+    }
+    return min(x, 0, keepdims);
+  } else {
+    for (size_t i = 0; i < x->shape().size(); i++) {
+      x = min(x, i, true);
+    }
+    return x;
   }
-  return min(x, 0);
 }

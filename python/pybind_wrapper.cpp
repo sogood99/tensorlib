@@ -104,19 +104,43 @@ PYBIND11_MODULE(tensorlib, m) {
   m.def("reshape", &reshape, "Reshape");
   m.def("flatten", &flatten, "Flatten");
   m.def(
-      "sum", [](variable x, size_t idx) { return sum(x, idx); },
-      py::arg("tensor"), py::arg("axis"), "Sum along axis");
-  m.def("sum", [](variable x) { return sum(x); }, "Sum whole tensor");
+      "sum",
+      [](variable x, size_t idx, bool keepdims) {
+        return sum(x, idx, keepdims);
+      },
+      py::arg("tensor"), py::arg("axis"), py::arg("keepdims") = false,
+      "Sum along axis");
   m.def(
-      "mean", [](variable x, size_t idx) { return mean(x, idx); },
-      py::arg("tensor"), py::arg("axis"), "Mean along axis");
-  m.def("mean", [](variable x) { return mean(x); }, "Mean whole tensor");
+      "sum", [](variable x, bool keepdims) { return sum(x, keepdims); },
+      py::arg("tensor"), py::arg("keepdims") = false, "Sum whole tensor");
   m.def(
-      "max", [](variable x, size_t idx) { return max(x, idx); },
-      py::arg("tensor"), py::arg("axis"), "Max along axis");
-  m.def("max", [](variable x) { return max(x); }, "Max whole tensor");
+      "mean",
+      [](variable x, size_t idx, bool keepdims) {
+        return mean(x, idx, keepdims);
+      },
+      py::arg("tensor"), py::arg("axis"), py::arg("keepdims") = false,
+      "Mean along axis");
   m.def(
-      "min", [](variable x, size_t idx) { return min(x, idx); },
-      py::arg("tensor"), py::arg("axis"), "Min along axis");
-  m.def("min", [](variable x) { return min(x); }, "Min whole tensor");
+      "mean", [](variable x, bool keepdims) { return mean(x, keepdims); },
+      py::arg("tensor"), py::arg("keepdims") = false, "Mean whole tensor");
+  m.def(
+      "max",
+      [](variable x, size_t idx, bool keepdims) {
+        return max(x, idx, keepdims);
+      },
+      py::arg("tensor"), py::arg("axis"), py::arg("keepdims") = false,
+      "Max along axis");
+  m.def(
+      "max", [](variable x, bool keepdims) { return max(x, keepdims); },
+      py::arg("tensor"), py::arg("keepdims") = false, "Max whole tensor");
+  m.def(
+      "min",
+      [](variable x, size_t idx, bool keepdims) {
+        return min(x, idx, keepdims);
+      },
+      py::arg("tensor"), py::arg("axis"), py::arg("keepdims") = false,
+      "Min along axis");
+  m.def(
+      "min", [](variable x, bool keepdims) { return min(x, keepdims); },
+      py::arg("tensor"), py::arg("keepdims") = false, "Min whole tensor");
 }
