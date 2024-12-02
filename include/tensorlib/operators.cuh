@@ -37,7 +37,7 @@ variable max(variable x, size_t axis, bool keepdims = false);
 variable max(variable x, bool keepdims = false);
 variable min(variable x, size_t axis, bool keepdims = false);
 variable min(variable x, bool keepdims = false);
-// variable argmax(variable x, size_t axis);
-// variable argmin(variable x, size_t axis);
+variable argmax(variable x, size_t axis, bool keepdims = false);
+variable argmin(variable x, size_t axis, bool keepdims = false);
 
 #endif

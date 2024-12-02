@@ -38,6 +38,10 @@ class CPUHandler {
                      size_t axis);
   static size_t* min(float* X, float* Z, size_t size);
   static void dot(float* X, float* Y, float* Z, size_t size);
+  static void argmax(float* X, float* Z, std::vector<size_t> x_shape,
+                     size_t axis);
+  static void argmin(float* X, float* Z, std::vector<size_t> x_shape,
+                     size_t axis);
 };
 
 #endif

@@ -143,4 +143,10 @@ PYBIND11_MODULE(tensorlib, m) {
   m.def(
       "min", [](variable x, bool keepdims) { return min(x, keepdims); },
       py::arg("tensor"), py::arg("keepdims") = false, "Min whole tensor");
+  m.def(
+      "argmax", [](variable x, size_t axis) { return argmax(x, axis); },
+      py::arg("tensor"), py::arg("axis"), "Argmax along axis");
+  m.def(
+      "argmin", [](variable x, size_t axis) { return argmin(x, axis); },
+      py::arg("tensor"), py::arg("axis"), "Argmin along axis");
 }

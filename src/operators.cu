@@ -735,3 +735,55 @@ variable min(variable x, bool keepdims) {
 
   return z;
 }
+
+variable argmax(variable x, size_t axis, bool keepdims) {
+  Device device = x->device();
+
+  if (axis >= x->shape().size()) {
+    throw std::runtime_error("Axis out of bounds");
+  }
+
+  // new shape
+  std::vector<size_t> shape = x->shape();
+  if (!keepdims) {
+    shape.erase(shape.begin() + axis);
+  } else {
+    shape[axis] = 1;
+  }
+
+  auto z = std::make_shared<Tensor>(shape, device, false);
+
+  if (device == Device::CPU) {
+    CPUHandler::argmax(x->data(), z->data(), x->shape(), axis);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  return z;
+}
+
+variable argmin(variable x, size_t axis, bool keepdims) {
+  Device device = x->device();
+
+  if (axis >= x->shape().size()) {
+    throw std::runtime_error("Axis out of bounds");
+  }
+
+  // new shape
+  std::vector<size_t> shape = x->shape();
+  if (!keepdims) {
+    shape.erase(shape.begin() + axis);
+  } else {
+    shape[axis] = 1;
+  }
+
+  auto z = std::make_shared<Tensor>(shape, device, false);
+
+  if (device == Device::CPU) {
+    CPUHandler::argmin(x->data(), z->data(), x->shape(), axis);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  return z;
+}

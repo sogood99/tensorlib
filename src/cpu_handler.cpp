@@ -228,10 +228,8 @@ size_t* CPUHandler::max(float* X, float* Z, std::vector<size_t> x_shape,
     Z[i] = -INFINITY;
   }
 
-#pragma omp parallel for
   for (size_t i = 0; i < input_size; ++i) {
     size_t output_idx = calculate_index_after_drop_axis(i, axis, x_shape);
-#pragma omp critical
     if (X[i] > Z[output_idx]) {
       Z[output_idx] = X[i];
       idx_list[output_idx] = i;
@@ -245,10 +243,8 @@ size_t* CPUHandler::max(float* X, float* Z, size_t size) {
   float max_val = -INFINITY;
   size_t max_idx = 0;
 
-#pragma omp parallel for
   for (size_t i = 0; i < size; ++i) {
     if (X[i] > max_val) {
-#pragma omp critical
       if (X[i] > max_val) {
         max_val = X[i];
         max_idx = i;
@@ -275,10 +271,8 @@ size_t* CPUHandler::min(float* X, float* Z, std::vector<size_t> x_shape,
     Z[i] = INFINITY;
   }
 
-#pragma omp parallel for
   for (size_t i = 0; i < input_size; ++i) {
     size_t output_idx = calculate_index_after_drop_axis(i, axis, x_shape);
-#pragma omp critical
     if (X[i] < Z[output_idx]) {
       Z[output_idx] = X[i];
       idx_list[output_idx] = i;
@@ -292,10 +286,8 @@ size_t* CPUHandler::min(float* X, float* Z, size_t size) {
   float min_val = INFINITY;
   size_t min_idx = 0;
 
-#pragma omp parallel for
   for (size_t i = 0; i < size; ++i) {
     if (X[i] < min_val) {
-#pragma omp critical
       if (X[i] < min_val) {
         min_val = X[i];
         min_idx = i;
@@ -312,4 +304,48 @@ size_t* CPUHandler::min(float* X, float* Z, size_t size) {
 // dot product of two arrays X and Y of size size
 void CPUHandler::dot(float* X, float* Y, float* Z, size_t size) {
   *Z = cblas_sdot(size, X, 1, Y, 1);
+}
+
+// argmax a tensor X along an axis and store it in Z
+void CPUHandler::argmax(float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = calculate_size(x_shape),
+         output_size = input_size / x_shape[axis];
+
+  std::vector<size_t> strides = calculate_strides(x_shape);
+
+  std::vector<float> max_values(output_size, -INFINITY);
+
+  for (size_t i = 0; i < input_size; ++i) {
+    size_t output_idx = calculate_index_after_drop_axis(i, axis, x_shape);
+    if (X[i] > max_values[output_idx]) {
+      size_t new_idx =
+          calculate_index_after_add_axis(output_idx, axis, x_shape);
+      size_t max_idx = (i - new_idx) / strides[axis];
+      max_values[output_idx] = X[i];
+      Z[output_idx] = max_idx;
+    }
+  }
+}
+
+// argmin a tensor X along an axis and store it in Z
+void CPUHandler::argmin(float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = calculate_size(x_shape),
+         output_size = input_size / x_shape[axis];
+
+  std::vector<size_t> strides = calculate_strides(x_shape);
+
+  std::vector<float> min_values(output_size, INFINITY);
+
+  for (size_t i = 0; i < input_size; ++i) {
+    size_t output_idx = calculate_index_after_drop_axis(i, axis, x_shape);
+    if (X[i] < min_values[output_idx]) {
+      size_t new_idx =
+          calculate_index_after_add_axis(output_idx, axis, x_shape);
+      size_t min_idx = (i - new_idx) / strides[axis];
+      min_values[output_idx] = X[i];
+      Z[output_idx] = min_idx;
+    }
+  }
 }
