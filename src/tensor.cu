@@ -132,9 +132,8 @@ void Tensor::set_grad(std::shared_ptr<Tensor> grad) {
   check_tensor_shape(grad, autograd_meta_->grad_);
 
   if (grad->device() != autograd_meta_->grad_->device()) {
-    grad->to_device(autograd_meta_->grad_->device());
+    grad = grad->to_device(autograd_meta_->grad_->device());
   }
-
   size_t size = grad->size();
 
   // Copy gradient data
