@@ -7,19 +7,17 @@ if len(sys.argv) > 1:
     elif sys.argv[1] == "gpu":
         device = tl.Device.GPU
     else:
-        print("Invalid device argument. Usage: python example.py [cpu|gpu]")
-        sys.exit(1)
+        device = tl.Device.CPU
 
 x = tl.Tensor(
-    [[[1.0, 2.0, 3.0], [-2.0, 1.0, 2.1]], [[2.0, 3.0, -7.0], [2.0, -1.0, -2.0]]],
+    [[1.0, 2.0, 3.0, -2.0], [4.0, 5.0, 6.0, 1.0], [7.0, 8.0, 9.0, 1.0]],
     device,
     requires_grad=True,
 )
 
 y = tl.Tensor(
     [
-        [[1.0, 1.2, 5.2, 3.0], [-2.0, 1.0, 2.1, 1.0], [1.0, 2.0, 3.0, 1.0]],
-        [[2.0, 3.0, 7.0, 1.0], [2.0, -1.0, -2.0, 1.0], [1.0, 2.0, 3.0, 1.0]],
+        [1.0, 2.0, 3.0, -6.0], [4.0, 5.0, 6.0, 1.0], [7.0, 8.0, 9.0, 1.0],
     ],
     device,
     requires_grad=True,
@@ -30,10 +28,10 @@ print(y.shape)
 print("x: ", x)
 print("y: ", y)
 
-z = tl.matmul(x, y)
+z = tl.cross_entropy(x, y)
 
 print("z: ", z)
-w = tl.softmax(z, axis=1)
+w = tl.relu(z) / 10.
 print("w: ", w)
 l = tl.exp(w)
 print("l: ", l)

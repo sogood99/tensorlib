@@ -795,3 +795,91 @@ void GPUHandler::softmax_backward(float* x_grad, const float* output_grad,
 
   cudaDeviceSynchronize();
 }
+
+__global__ void cross_entropy_kernel(const float* X, const float* Y, float* Z,
+                                     size_t batch_size, size_t num_classes) {
+  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < batch_size) {
+    float max_val = -INFINITY;
+    for (size_t j = 0; j < num_classes; j++) {
+      max_val = fmaxf(max_val, X[idx * num_classes + j]);
+    }
+
+    float sum = 0.0f;
+    for (size_t j = 0; j < num_classes; j++) {
+      sum += expf(X[idx * num_classes + j] - max_val);
+    }
+
+    float log_sum = logf(sum) + max_val;
+
+    float loss = 0.0f;
+    for (size_t j = 0; j < num_classes; j++) {
+      loss += Y[idx * num_classes + j] * (X[idx * num_classes + j] - log_sum);
+    }
+
+    Z[idx] = -loss;
+  }
+}
+
+void GPUHandler::cross_entropy(const float* X, const float* Y, float* Z,
+                               std::vector<size_t> x_shape) {
+  size_t batch_size = x_shape[0], num_classes = x_shape[1];
+
+  size_t block_size = 256;
+  size_t num_blocks = (batch_size + block_size - 1) / block_size;
+
+  cross_entropy_kernel<<<num_blocks, block_size>>>(X, Y, Z, batch_size, num_classes);
+
+  cudaDeviceSynchronize();
+}
+
+__global__ void cross_entropy_backward_x_kernel(const float* t_softmax, const float* y, float* x_grad,
+                                                const float* output_grad, size_t batch_size, size_t num_classes) {
+  size_t b = blockIdx.x * blockDim.x + threadIdx.x;
+  if (b < batch_size) {
+    const float* t_softmax_batch = t_softmax + b * num_classes;
+    const float* y_batch = y + b * num_classes;
+    float* x_grad_batch = x_grad + b * num_classes;
+
+    float y_sum = 0.0f;
+    for (size_t j = 0; j < num_classes; ++j) {
+      y_sum += y_batch[j];
+    }
+
+    for (size_t i = 0; i < num_classes; ++i) {
+      x_grad_batch[i] += output_grad[b] * (-y_batch[i] + t_softmax_batch[i] * y_sum);
+    }
+  }
+}
+
+void GPUHandler::cross_entropy_backward_x(const float* t_softmax, const float* y, float* x_grad,
+                                          const float* output_grad, size_t batch_size, size_t num_classes) {
+  size_t threads_per_block = 256;
+  size_t num_blocks = (batch_size + threads_per_block - 1) / threads_per_block;
+
+  cross_entropy_backward_x_kernel<<<num_blocks, threads_per_block>>>(t_softmax, y, x_grad, output_grad, batch_size, num_classes);
+
+  cudaDeviceSynchronize();
+}
+
+__global__ void cross_entropy_backward_y_kernel(const float* t_softmax, float* y_grad,
+                                                const float* output_grad, size_t batch_size, size_t num_classes) {
+  size_t b = blockIdx.x * blockDim.x + threadIdx.x;
+  if (b < batch_size) {
+    float* y_grad_batch = y_grad + b * num_classes;
+
+    for (size_t i = 0; i < num_classes; ++i) {
+      y_grad_batch[i] += output_grad[b] * (-logf(t_softmax[b * num_classes + i]));
+    }
+  }
+}
+
+void GPUHandler::cross_entropy_backward_y(const float* t_softmax, float* y_grad,
+                                          const float* output_grad, size_t batch_size, size_t num_classes) {
+  size_t threads_per_block = 256;
+  size_t num_blocks = (batch_size + threads_per_block - 1) / threads_per_block;
+
+  cross_entropy_backward_y_kernel<<<num_blocks, threads_per_block>>>(t_softmax, y_grad, output_grad, batch_size, num_classes);
+
+  cudaDeviceSynchronize();
+}

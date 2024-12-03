@@ -842,7 +842,7 @@ variable cross_entropy(variable x, variable y) {
   if (device == Device::CPU) {
     CPUHandler::cross_entropy(x->data(), y->data(), z->data(), x->shape());
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::cross_entropy(x->data(), y->data(), z->data(), x->shape());
   }
 
   if (x->requires_grad() || y->requires_grad()) {
