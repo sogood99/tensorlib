@@ -60,6 +60,11 @@ class GPUHandler {
   // relu backward, x_grad[i] += output_grad[i] * (x_data[i] > 0 ? 1 : 0)
   static void reluBackward(const float* output_grad, const float* x_data,
                            float* x_grad, size_t size);
+  // sigmoid
+  static void sigmoid(const float* input, float* output, size_t size);
+  // sigmoid backward, x_grad[i] += output_grad[i] * output[i] * (1 - output[i])
+  static void sigmoidBackward(const float* output_grad, const float* output,
+                              float* x_grad, size_t size);
   static void sum(float* input, float* output, std::vector<size_t> shape,
                   size_t axis);
   // sum all elements
@@ -70,6 +75,14 @@ class GPUHandler {
                        size_t axis_size, float factor);
   static void set_all(float* x, const float* val, float factor, size_t size);
   static void reshape(const float* input, float* output, size_t size);
+  static void broadcast(const float* input, float* output,
+                        const std::vector<size_t>& input_shape,
+                        const std::vector<size_t>& output_shape);
+  static void broadcastBackward(const float* output_grad, float* x_grad,
+                                const std::vector<size_t>& x_shape,
+                                const std::vector<size_t>& z_stride,
+                                const std::vector<size_t>& x_stride,
+                                size_t z_size);
 
   cublasHandle_t getHandle() { return handle; }
 

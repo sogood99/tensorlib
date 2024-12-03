@@ -373,6 +373,45 @@ void GPUHandler::reluBackward(const float* output_grad, const float* x_data,
   checkCudaErrors(cudaDeviceSynchronize());
 }
 
+// sigmoid
+__global__ void elementWiseSigmoid(const float* input, float* output,
+                                   size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    output[idx] = 1.0f / (1.0f + expf(-input[idx]));  // Compute sigmoid
+  }
+}
+
+void GPUHandler::sigmoid(const float* input, float* output, size_t size) {
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+
+  elementWiseSigmoid<<<gridSize, blockSize>>>(input, output, size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
+// sigmoid backward
+__global__ void sigmoidBackwardKernel(const float* output_grad,
+                                      const float* output, float* x_grad,
+                                      size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    x_grad[idx] += output_grad[idx] * output[idx] * (1 - output[idx]);
+  }
+}
+
+void GPUHandler::sigmoidBackward(const float* output_grad, const float* output,
+                                 float* x_grad, size_t size) {
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+
+  sigmoidBackwardKernel<<<gridSize, blockSize>>>(output_grad, output, x_grad,
+                                                 size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
 void GPUHandler::reshape(const float* input, float* output, size_t size) {
   checkCudaErrors(cudaMemcpy(output, input, size * sizeof(float),
                              cudaMemcpyDeviceToDevice));
@@ -397,4 +436,117 @@ void GPUHandler::logBackward(const float* output_grad, const float* x_data,
   logBackwardKernel<<<gridSize, blockSize>>>(output_grad, x_data, x_grad, size);
 
   checkCudaErrors(cudaDeviceSynchronize());
+}
+
+__global__ void broadcast_kernel(const float* X, float* Z,
+                                 const size_t* x_shape, const size_t* z_shape,
+                                 const size_t* x_strides,
+                                 const size_t* z_strides, size_t total_elements,
+                                 size_t x_dims, size_t z_dims) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= total_elements) return;
+
+  size_t x_index = 0, z_index = i;
+
+  for (size_t dim = 0; dim < z_dims; ++dim) {
+    size_t z_coord = z_index / z_strides[dim];
+    z_index %= z_strides[dim];
+
+    size_t x_coord = (x_shape[dim] == 1) ? 0 : z_coord;
+    x_index += x_coord * x_strides[dim];
+  }
+
+  Z[i] = X[x_index];
+}
+
+void GPUHandler::broadcast(const float* X, float* Z,
+                           const std::vector<size_t>& x_shape,
+                           const std::vector<size_t>& z_shape) {
+  size_t x_dims = x_shape.size();
+  size_t z_dims = z_shape.size();
+  size_t total_elements = calculate_size(z_shape);
+
+  std::vector<size_t> x_strides = calculate_strides(x_shape),
+                      z_strides = calculate_strides(z_shape);
+
+  size_t *d_x_shape, *d_z_shape, *d_x_strides, *d_z_strides;
+  cudaMalloc(&d_x_shape, x_dims * sizeof(size_t));
+  cudaMalloc(&d_z_shape, z_dims * sizeof(size_t));
+  cudaMalloc(&d_x_strides, x_dims * sizeof(size_t));
+  cudaMalloc(&d_z_strides, z_dims * sizeof(size_t));
+
+  cudaMemcpy(d_x_shape, x_shape.data(), x_dims * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(d_z_shape, z_shape.data(), z_dims * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(d_x_strides, x_strides.data(), x_dims * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(d_z_strides, z_strides.data(), z_dims * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+
+  size_t block_size = 256;
+  size_t grid_size = (total_elements + block_size - 1) / block_size;
+  broadcast_kernel<<<grid_size, block_size>>>(X, Z, d_x_shape, d_z_shape,
+                                              d_x_strides, d_z_strides,
+                                              total_elements, x_dims, z_dims);
+
+  cudaDeviceSynchronize();
+
+  cudaFree(d_x_shape);
+  cudaFree(d_z_shape);
+  cudaFree(d_x_strides);
+  cudaFree(d_z_strides);
+}
+
+__global__ void broadcastBackwardKernel(const float* output_grad, float* x_grad,
+                                        const size_t* x_shape,
+                                        const size_t* z_stride,
+                                        const size_t* x_stride, size_t z_size,
+                                        size_t ndim) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= z_size) return;
+
+  size_t x_index = 0, z_index = i;
+
+  for (size_t dim = 0; dim < ndim; ++dim) {
+    size_t z_coord = z_index / z_stride[dim];
+    z_index %= z_stride[dim];
+
+    size_t x_coord = (x_shape[dim] == 1) ? 0 : z_coord;
+    x_index += x_coord * x_stride[dim];
+  }
+
+  atomicAdd(&x_grad[x_index], output_grad[i]);
+}
+
+void GPUHandler::broadcastBackward(const float* output_grad, float* x_grad,
+                                   const std::vector<size_t>& x_shape,
+                                   const std::vector<size_t>& z_stride,
+                                   const std::vector<size_t>& x_stride,
+                                   size_t z_size) {
+  size_t ndim = x_shape.size();
+
+  size_t *d_x_shape, *d_z_stride, *d_x_stride;
+  cudaMalloc(&d_x_shape, ndim * sizeof(size_t));
+  cudaMalloc(&d_z_stride, ndim * sizeof(size_t));
+  cudaMalloc(&d_x_stride, ndim * sizeof(size_t));
+
+  cudaMemcpy(d_x_shape, x_shape.data(), ndim * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(d_z_stride, z_stride.data(), ndim * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+  cudaMemcpy(d_x_stride, x_stride.data(), ndim * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+
+  size_t block_size = 256;
+  size_t grid_size = (z_size + block_size - 1) / block_size;
+
+  broadcastBackwardKernel<<<grid_size, block_size>>>(
+      output_grad, x_grad, d_x_shape, d_z_stride, d_x_stride, z_size, ndim);
+
+  cudaDeviceSynchronize();
+
+  cudaFree(d_x_shape);
+  cudaFree(d_z_stride);
+  cudaFree(d_x_stride);
 }

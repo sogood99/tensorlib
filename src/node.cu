@@ -613,7 +613,8 @@ void SigmoidBackward::apply() {
         x_grad[i] += output_grad[i] * sigmoid_x * (1 - sigmoid_x);
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::sigmoidBackward(output_grad, output_.lock()->data(), x_grad,
+                                  x_grad_tensor->size());
     }
   }
 }
@@ -746,7 +747,8 @@ void BroadcastBackward::apply() {
       }
 
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::broadcastBackward(output_grad, x_grad, x_shape, z_stride,
+                                    x_stride, output_grad_tensor->size());
     }
   }
 }

@@ -9,15 +9,19 @@
 // add two arrays X and Y of size size
 // Z = X + Y
 void CPUHandler::add(float* X, float* Y, float* Z, size_t size) {
-  cblas_scopy(size, X, 1, Z, 1);
-  cblas_saxpy(size, 1.0f, Y, 1, Z, 1);
+#pragma omp parallel for
+  for (size_t i = 0; i < size; ++i) {
+    Z[i] = X[i] + Y[i];
+  }
 }
 
 // subtract two arrays X and Y of size size
 // Z = X - Y
 void CPUHandler::sub(float* X, float* Y, float* Z, size_t size) {
-  cblas_scopy(size, X, 1, Z, 1);
-  cblas_saxpy(size, -1.0f, Y, 1, Z, 1);
+#pragma omp parallel for
+  for (size_t i = 0; i < size; ++i) {
+    Z[i] = X[i] - Y[i];
+  }
 }
 
 // multiply two arrays X and Y of size size

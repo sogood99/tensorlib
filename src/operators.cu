@@ -406,7 +406,7 @@ variable sigmoid(variable x) {
   if (device == Device::CPU) {
     CPUHandler::sigmoid(x->data(), z->data(), x->size());
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::sigmoid(x->data(), z->data(), x->size());
   }
 
   if (x->requires_grad()) {
@@ -486,7 +486,7 @@ variable broadcast_to(variable x, std::vector<size_t> shape) {
   if (device == Device::CPU) {
     CPUHandler::broadcast(x->data(), z->data(), x->shape(), shape);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::broadcast(x->data(), z->data(), x->shape(), shape);
   }
 
   if (x->requires_grad()) {
