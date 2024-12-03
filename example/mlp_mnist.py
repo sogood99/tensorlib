@@ -4,21 +4,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
-from sklearn.datasets import load_digits
+from sklearn.datasets import fetch_openml
 
 # Device selection
 device = tl.Device.CPU
 
-input_size = 8 * 8
-hidden_size = 64
+input_size = 28 * 28
+hidden_size = 128
 output_size = 10
 learning_rate = 0.01
 epochs = 100
 
 # Load MNIST dataset
-digits = load_digits()
-X_data = digits.data
-y_data = digits.target
+mnist = fetch_openml("mnist_784", parser="auto")
+X_data = mnist.data.to_numpy()
+y_data = mnist.target.to_numpy().astype(int)
 
 # Split data into training and test sets
 X_train, X_test, y_train, y_test = train_test_split(
@@ -87,21 +87,22 @@ for epoch in range(epochs):
     train_loss.append(loss.item())
 
     if epoch % 10 == 0:
-        print(f"Epoch {epoch}, Loss: {loss.item()}")
+        print(f"Epoch {epoch}, Loss: {loss.item():.3f}, ", end="")
         pred_class = tl.argmax(y_pred, axis=1).to_numpy().astype(int)
         true_class = tl.argmax(y_train, axis=1).to_numpy().astype(int)
         train_accuracy.append(np.mean(pred_class == true_class))
-        print(f"Train Accuracy: {train_accuracy[-1]}")
+        # train accuracy to 3 decimal places
+        print(f"Train Accuracy: {train_accuracy[-1]:.3f}, ", end="")
 
         # Test
         y_pred = forward(X_test)
         loss = tl.mean(tl.cross_entropy(y_pred, y_test))
         test_loss.append(loss.item())
-        print(f"Test Loss: {loss.item()}")
+        print(f"Test Loss: {loss.item():.3f}, ", end="")
         pred_class = tl.argmax(y_pred, axis=1).to_numpy().astype(int)
         true_class = tl.argmax(y_test, axis=1).to_numpy().astype(int)
         test_accuracy.append(np.mean(pred_class == true_class))
-        print(f"Test Accuracy: {test_accuracy[-1]}")
+        print(f"Test Accuracy: {test_accuracy[-1]:.3f}")
 
 # Plot results if file output is provided
 if len(sys.argv) > 1:
