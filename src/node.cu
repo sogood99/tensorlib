@@ -473,7 +473,8 @@ void ExpBackward::apply() {
         x_grad[i] += output_grad[i] * std::exp(x->data()[i]);
       }
     } else if (device == Device::GPU) {
-      GPUHandler::expMul(x->data(), x_grad, output_grad, x_grad_tensor->size());
+      GPUHandler::expMul(output_.lock()->data(), x_grad, output_grad,
+                         x_grad_tensor->size());
     }
   }
 }
@@ -874,7 +875,7 @@ void SelectorBackward::apply() {
         x_grad[og_idx] += output_grad[i];
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::update_grad_selector(index_list_, x_grad, output_grad, size);
     }
   }
 }
@@ -909,14 +910,12 @@ void SelectAllBackward::apply() {
     variable x_grad_tensor = x->autograd_meta().grad_;
     float* x_grad = x_grad_tensor->data();
 
-    size_t size = output_grad_tensor->size();
-
     Device device = x->device();
 
     if (device == Device::CPU) {
       x_grad[*index_] += output_grad[0];
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::update_grad_selector(index_, x_grad, output_grad, 1);
     }
   }
 }
@@ -962,7 +961,9 @@ void SoftmaxBackward::apply() {
         }
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::softmax_backward(
+          x_grad, output_grad, z_data, x->shape()[axis_],
+          x->size() / x->shape()[axis_], stride[axis_]);
     }
   }
 }

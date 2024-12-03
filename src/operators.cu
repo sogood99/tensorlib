@@ -647,7 +647,7 @@ variable max(variable x, size_t axis, bool keepdims) {
   if (device == Device::CPU) {
     idx_list = CPUHandler::max(x->data(), z->data(), x->shape(), axis);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    idx_list = GPUHandler::max(x->data(), z->data(), x->shape(), axis);
   }
 
   if (x->requires_grad()) {
@@ -678,7 +678,7 @@ variable max(variable x, bool keepdims) {
   if (device == Device::CPU) {
     index = CPUHandler::max(x->data(), z->data(), x->size());
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    index = GPUHandler::max(x->data(), z->data(), x->size());
   }
 
   if (x->requires_grad()) {
@@ -711,7 +711,7 @@ variable min(variable x, size_t axis, bool keepdims) {
   if (device == Device::CPU) {
     idx_list = CPUHandler::min(x->data(), z->data(), x->shape(), axis);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    idx_list = GPUHandler::min(x->data(), z->data(), x->shape(), axis);
   }
 
   if (x->requires_grad()) {
@@ -742,7 +742,7 @@ variable min(variable x, bool keepdims) {
   if (device == Device::CPU) {
     index = CPUHandler::min(x->data(), z->data(), x->size());
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    index = GPUHandler::min(x->data(), z->data(), x->size());
   }
 
   if (x->requires_grad()) {
@@ -814,7 +814,7 @@ variable softmax(variable x, size_t axis) {
   if (device == Device::CPU) {
     CPUHandler::softmax(x->data(), z->data(), x->shape(), axis);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::softmax(x->data(), z->data(), x->shape(), axis);
   }
 
   if (x->requires_grad()) {

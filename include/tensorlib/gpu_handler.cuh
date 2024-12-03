@@ -46,7 +46,7 @@ class GPUHandler {
   static void logBackward(const float* output_grad, const float* x_data,
                           float* x_grad, size_t size);
   static void exp(const float* input, float* output, size_t size);
-  static void expMul(const float* x_data, float* x_grad,
+  static void expMul(const float* output_data, float* x_grad,
                      const float* output_grad, size_t size);
   static void sin(const float* input, float* output, size_t size);
   static void cos(const float* input, float* output, size_t size);
@@ -87,6 +87,29 @@ class GPUHandler {
                                 const std::vector<size_t>& z_stride,
                                 const std::vector<size_t>& x_stride,
                                 size_t z_size);
+  // finds the maximum value along the specified axis, and stores the index of
+  // the maximum value in index_list return
+  static size_t* max(const float* input, float* output,
+                     std::vector<size_t> shape, size_t axis);
+  // find the maximum value in the tensor
+  static size_t* max(const float* input, float* output, size_t size);
+  // find the minimum value along the specified axis
+  static size_t* min(const float* input, float* output,
+                     std::vector<size_t> shape, size_t axis);
+  // find the minimum value in the tensor
+  static size_t* min(const float* input, float* output, size_t size);
+  // softmax along the specified axis
+  static void softmax(const float* input, float* output,
+                      std::vector<size_t> shape, size_t axis);
+  // softmax backward
+  static void softmax_backward(float* x_grad, const float* output_grad,
+                               const float* z_data, size_t axis_size,
+                               size_t size_squashed, size_t axis_stride);
+
+  // update the gradient of the input tensor with the gradient of the output
+  // x_grad[index_list[i]] += output_grad[i]
+  static void update_grad_selector(size_t* index_list, float* x_grad,
+                                   float* output_grad, size_t size);
 
   cublasHandle_t getHandle() { return handle; }
 

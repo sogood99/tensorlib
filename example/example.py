@@ -11,7 +11,7 @@ if len(sys.argv) > 1:
         sys.exit(1)
 
 x = tl.Tensor(
-    [[[1.0, 2.0, 3.0], [-2.0, 1.0, 2.1]], [[2.0, 3.0, 7.0], [2.0, -1.0, -2.0]]],
+    [[[1.0, 2.0, 3.0], [-2.0, 1.0, 2.1]], [[2.0, 3.0, -7.0], [2.0, -1.0, -2.0]]],
     device,
     requires_grad=True,
 )
@@ -33,9 +33,9 @@ print("y: ", y)
 z = tl.matmul(x, y)
 
 print("z: ", z)
-w = tl.mean(z)
+w = tl.softmax(z, axis=1)
 print("w: ", w)
-l = tl.log(w)
+l = tl.exp(w)
 print("l: ", l)
 
 init_grad_l = tl.ones(l.shape, device, requires_grad=False)

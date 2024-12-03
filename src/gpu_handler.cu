@@ -271,22 +271,22 @@ void GPUHandler::exp(const float* input, float* output, size_t size) {
 }
 
 // expMul
-__global__ void expMulKernel(const float* x_data, float* x_grad,
+__global__ void expMulKernel(const float* output_data, float* x_grad,
                              const float* output_grad, size_t size) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < size) {
-    x_grad[idx] += output_grad[idx] * expf(x_data[idx]);
+    x_grad[idx] += output_grad[idx] * output_data[idx];
   }
 }
 
 // x_grad += output_grad * exp(x_data)
-void GPUHandler::expMul(const float* x_data, float* x_grad,
+void GPUHandler::expMul(const float* output_data, float* x_grad,
                         const float* output_grad, size_t size) {
   cublasHandle_t handle = getInstance().getHandle();
 
   int blockSize = 256;
   int gridSize = (size + blockSize - 1) / blockSize;
-  expMulKernel<<<gridSize, blockSize>>>(x_data, x_grad, output_grad, size);
+  expMulKernel<<<gridSize, blockSize>>>(output_data, x_grad, output_grad, size);
 
   checkCudaErrors(cudaDeviceSynchronize());
 }
@@ -577,4 +577,221 @@ void GPUHandler::broadcastBackward(const float* output_grad, float* x_grad,
   cudaFree(d_x_shape);
   cudaFree(d_z_stride);
   cudaFree(d_x_stride);
+}
+
+__global__ void max_kernel(const float* X, float* Z, size_t* idx_list,
+                           const size_t* x_shape, const size_t* x_stride,
+                           size_t input_size, size_t output_size, size_t ndim,
+                           size_t axis) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= output_size) return;
+
+  Z[i] = -INFINITY;
+  idx_list[i] = 0;
+
+  size_t start_idx = (i / x_stride[axis]) * x_stride[axis] * x_shape[axis] +
+                     (i % x_stride[axis]);
+
+  for (size_t j = 0; j < x_shape[axis]; ++j) {
+    size_t idx = start_idx + j * x_stride[axis];
+    if (X[idx] > Z[i]) {
+      Z[i] = X[idx];
+      idx_list[i] = idx;
+    }
+  }
+}
+
+size_t* GPUHandler::max(const float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = calculate_size(x_shape);
+  size_t output_size = input_size / x_shape[axis];
+  size_t ndim = x_shape.size();
+
+  size_t* d_x_shape;
+  size_t* d_x_stride;
+
+  size_t* idx_list;
+  cudaMalloc(&idx_list, output_size * sizeof(size_t));
+
+  cudaMalloc(&d_x_shape, ndim * sizeof(size_t));
+  cudaMalloc(&d_x_stride, ndim * sizeof(size_t));
+
+  cudaMemcpy(d_x_shape, x_shape.data(), ndim * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+
+  std::vector<size_t> x_stride = calculate_strides(x_shape);
+  cudaMemcpy(d_x_stride, x_stride.data(), ndim * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+
+  size_t block_size = 256;
+  size_t grid_size = (output_size + block_size - 1) / block_size;
+  max_kernel<<<grid_size, block_size>>>(X, Z, idx_list, d_x_shape, d_x_stride,
+                                        input_size, output_size, ndim, axis);
+
+  cudaFree(d_x_shape);
+  cudaFree(d_x_stride);
+
+  return idx_list;
+}
+
+size_t* GPUHandler::max(const float* X, float* Z, size_t size) {
+  return max(X, Z, std::vector<size_t>{size}, 0);
+}
+
+__global__ void min_kernel(const float* X, float* Z, size_t* idx_list,
+                           const size_t* x_shape, const size_t* x_stride,
+                           size_t input_size, size_t output_size, size_t ndim,
+                           size_t axis) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= output_size) return;
+
+  Z[i] = INFINITY;
+  idx_list[i] = 0;
+
+  size_t start_idx = (i / x_stride[axis]) * x_stride[axis] * x_shape[axis] +
+                     (i % x_stride[axis]);
+
+  for (size_t j = 0; j < x_shape[axis]; ++j) {
+    size_t idx = start_idx + j * x_stride[axis];
+    if (X[idx] < Z[i]) {
+      Z[i] = X[idx];
+      idx_list[i] = idx;
+    }
+  }
+}
+
+size_t* GPUHandler::min(const float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = calculate_size(x_shape);
+  size_t output_size = input_size / x_shape[axis];
+  size_t ndim = x_shape.size();
+
+  size_t* d_x_shape;
+  size_t* d_x_stride;
+
+  size_t* idx_list;
+  cudaMalloc(&idx_list, output_size * sizeof(size_t));
+
+  cudaMalloc(&d_x_shape, ndim * sizeof(size_t));
+  cudaMalloc(&d_x_stride, ndim * sizeof(size_t));
+
+  cudaMemcpy(d_x_shape, x_shape.data(), ndim * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+
+  std::vector<size_t> x_stride = calculate_strides(x_shape);
+  cudaMemcpy(d_x_stride, x_stride.data(), ndim * sizeof(size_t),
+             cudaMemcpyHostToDevice);
+
+  size_t block_size = 256;
+  size_t grid_size = (output_size + block_size - 1) / block_size;
+  min_kernel<<<grid_size, block_size>>>(X, Z, idx_list, d_x_shape, d_x_stride,
+                                        input_size, output_size, ndim, axis);
+
+  cudaFree(d_x_shape);
+  cudaFree(d_x_stride);
+
+  return idx_list;
+}
+
+size_t* GPUHandler::min(const float* X, float* Z, size_t size) {
+  return min(X, Z, std::vector<size_t>{size}, 0);
+}
+
+__global__ void update_grad_kernel(size_t* index_list, float* x_grad,
+                                   float* output_grad, size_t size) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= size) return;
+
+  atomicAdd(&x_grad[index_list[i]], output_grad[i]);
+}
+
+void GPUHandler::update_grad_selector(size_t* index_list, float* x_grad,
+                                      float* output_grad, size_t size) {
+  size_t block_size = 256;
+  size_t grid_size = (size + block_size - 1) / block_size;
+
+  update_grad_kernel<<<grid_size, block_size>>>(index_list, x_grad, output_grad,
+                                                size);
+
+  cudaDeviceSynchronize();
+}
+
+__global__ void softmax_kernel(const float* X, float* Z, size_t axis_size,
+                               size_t axis_stride, size_t size_squashed) {
+  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size_squashed) {
+    size_t offset =
+        (idx / axis_stride) * axis_stride * axis_size + (idx % axis_stride);
+
+    float max_val = -INFINITY;
+    for (size_t j = 0; j < axis_size; j++) {
+      size_t current_idx = offset + j * axis_stride;
+      max_val = fmaxf(max_val, X[current_idx]);
+    }
+
+    float sum = 0.0f;
+    for (size_t j = 0; j < axis_size; j++) {
+      size_t current_idx = offset + j * axis_stride;
+      sum += expf(X[current_idx] - max_val);
+    }
+
+    // Apply the softmax function
+    for (size_t j = 0; j < axis_size; j++) {
+      size_t current_idx = offset + j * axis_stride;
+      Z[current_idx] = expf(X[current_idx] - max_val) / sum;
+    }
+  }
+}
+
+void GPUHandler::softmax(const float* X, float* Z, std::vector<size_t> x_shape,
+                         size_t axis) {
+  std::vector<size_t> strides = calculate_strides(x_shape);
+  size_t ndim = x_shape.size();
+  size_t axis_size = x_shape[axis];
+  size_t size = calculate_size(x_shape);
+  size_t size_squashed = size / axis_size;
+
+  size_t block_size = 256;
+  size_t grid_size = (size_squashed + block_size - 1) / block_size;
+
+  softmax_kernel<<<grid_size, block_size>>>(X, Z, axis_size, strides[axis],
+                                            size_squashed);
+
+  cudaDeviceSynchronize();
+}
+
+__global__ void softmax_backward_kernel(float* x_grad, const float* output_grad,
+                                        const float* z_data, size_t axis_size,
+                                        size_t size_squashed,
+                                        size_t axis_stride) {
+  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+
+  if (idx < size_squashed) {
+    size_t offset =
+        (idx / axis_stride) * axis_stride * axis_size + idx % axis_stride;
+
+    for (size_t j = 0; j < axis_size; j++) {
+      for (size_t i = 0; i < axis_size; i++) {
+        // Compute the gradient update: ds_i/dx_j = s_i * (delta_ij - s_j)
+        x_grad[offset + j * axis_stride] +=
+            output_grad[offset + i * axis_stride] *
+            z_data[offset + i * axis_stride] *
+            ((i == j ? 1 : 0) - z_data[offset + j * axis_stride]);
+      }
+    }
+  }
+}
+
+void GPUHandler::softmax_backward(float* x_grad, const float* output_grad,
+                                  const float* z_data, size_t axis_size,
+                                  size_t size_squashed, size_t axis_stride) {
+  size_t block_size = 256;
+  size_t grid_size = (size_squashed + block_size - 1) / block_size;
+  std::cout << "axis_size: " << axis_size << " size squashed: " << size_squashed
+            << " axis_stride: " << axis_stride << std::endl;
+
+  softmax_backward_kernel<<<grid_size, block_size>>>(
+      x_grad, output_grad, z_data, axis_size, size_squashed, axis_stride);
+
+  cudaDeviceSynchronize();
 }
