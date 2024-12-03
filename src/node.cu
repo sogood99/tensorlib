@@ -823,7 +823,7 @@ void SumAllBackward::apply() {
         x_grad[i] += output_grad[0] * factor_;
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::set_all(x_grad, output_grad, factor_, size);
     }
   }
 }

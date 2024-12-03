@@ -548,7 +548,7 @@ variable sum(variable x, bool keepdims) {
   if (device == Device::CPU) {
     CPUHandler::sum(x->data(), z->data(), x->size());
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::sum(x->data(), z->data(), x->size());
   }
 
   if (x->requires_grad()) {

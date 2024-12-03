@@ -53,10 +53,13 @@ class GPUHandler {
   static void relu(const float* input, float* output, size_t size);
   static void sum(float* input, float* output, std::vector<size_t> shape,
                   size_t axis);
+  // sum all elements
+  static void sum(float* input, float* output, size_t size);
   static void add_axis(float* x_grad, const float* output_grad,
                        std::vector<size_t> x_shape,
                        std::vector<size_t> x_stride, size_t axis,
                        size_t axis_size, float factor);
+  static void set_all(float* x, const float* val, float factor, size_t size);
   static void reshape(const float* input, float* output, size_t size);
 
   cublasHandle_t getHandle() { return handle; }

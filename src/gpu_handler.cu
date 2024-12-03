@@ -164,41 +164,32 @@ void GPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
   checkCudaErrors(cudaDeviceSynchronize());
 }
 
-__device__ size_t d_calculate_index_after_add_axis(size_t index, size_t axis,
-                                                   const size_t* shape,
-                                                   size_t nDims) {
-  size_t new_index = 0;
-  size_t old_stride = 1, new_stride = 1;
-
-  for (int i = nDims; i > 0; i--) {
-    size_t dim_size = shape[i - 1];
-    if (i - 1 != axis) {
-      size_t c_i = index % dim_size;
-      new_index += c_i * new_stride;
-      new_stride *= dim_size;
-      old_stride *= dim_size;
-      index /= dim_size;
-    } else {
-      new_stride *= dim_size;
-    }
+__global__ void sumAll(const float* X, float* Z, size_t size) {
+  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    atomicAdd(&Z[0], X[idx]);
   }
-  return new_index;
 }
 
-__global__ void addAxisKernel(float* x_grad, const float* output_grad,
-                              const size_t* x_shape, const size_t* x_stride,
-                              size_t axis, size_t axis_size, float factor,
-                              size_t size, size_t nDims) {
+void GPUHandler::sum(float* X, float* Z, size_t size) {
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+
+  sumAll<<<gridSize, blockSize>>>(X, Z, size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
+__global__ void add_axis_kernel(const float* output_grad, float* x_grad,
+                                size_t input_size, size_t output_size,
+                                size_t axis_stride, size_t axis_size) {
   unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-  if (i < size) {
-    size_t input_idx =
-        d_calculate_index_after_add_axis(i, axis, x_shape, nDims);
+  if (i < input_size) {
+    size_t output_idx =
+        ((i / axis_size / axis_stride) * axis_stride + i % axis_stride);
 
-    for (size_t j = 0; j < axis_size; j++) {
-      x_grad[input_idx] += output_grad[i] * factor;
-      input_idx += x_stride[axis];
-    }
+    x_grad[i] += output_grad[output_idx];
   }
 }
 
@@ -206,28 +197,32 @@ void GPUHandler::add_axis(float* x_grad, const float* output_grad,
                           std::vector<size_t> x_shape,
                           std::vector<size_t> x_stride, size_t axis,
                           size_t axis_size, float factor) {
-  size_t size = calculate_size(x_shape);
-  size_t nDims = x_shape.size();
+  size_t input_size = calculate_size(x_shape);
+  size_t output_size = input_size / axis_size;
+  size_t axis_stride = x_stride[axis];
 
-  size_t *d_x_shape, *d_x_stride;
-  cudaMalloc(&d_x_shape, nDims * sizeof(size_t));
-  cudaMalloc(&d_x_stride, nDims * sizeof(size_t));
+  int threads = 256, blocks = (output_size + threads - 1) / threads;
+  add_axis_kernel<<<blocks, threads>>>(output_grad, x_grad, input_size,
+                                       output_size, axis_stride, axis_size);
+}
 
-  cudaMemcpy(d_x_shape, x_shape.data(), nDims * sizeof(size_t),
-             cudaMemcpyHostToDevice);
-  cudaMemcpy(d_x_stride, x_stride.data(), nDims * sizeof(size_t),
-             cudaMemcpyHostToDevice);
+__global__ void set_all_kernel(float* x, const float* val, float factor,
+                               size_t size) {
+  unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
-  cudaMemset(x_grad, 0, size * sizeof(float));
+  if (i < size) {
+    x[i] = factor * val[0];
+  }
+}
 
+void GPUHandler::set_all(float* x, const float* val, float factor,
+                         size_t size) {
   int blockSize = 256;
-  int numBlocks = (size + blockSize - 1) / blockSize;
-  addAxisKernel<<<numBlocks, blockSize>>>(x_grad, output_grad, d_x_shape,
-                                          d_x_stride, axis, axis_size, factor,
-                                          size, nDims);
+  int gridSize = (size + blockSize - 1) / blockSize;
 
-  cudaFree(d_x_shape);
-  cudaFree(d_x_stride);
+  set_all_kernel<<<gridSize, blockSize>>>(x, val, factor, size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
 }
 
 // exp
