@@ -50,7 +50,16 @@ class GPUHandler {
                      const float* output_grad, size_t size);
   static void sin(const float* input, float* output, size_t size);
   static void cos(const float* input, float* output, size_t size);
+  // sin backward, x_grad[i] += output_grad[i] * cos(x_data[i])
+  static void sinBackward(const float* output_grad, const float* x_data,
+                          float* x_grad, size_t size);
+  // cos backward, x_grad[i] += -output_grad[i] * sin(x_data[i])
+  static void cosBackward(const float* output_grad, const float* x_data,
+                          float* x_grad, size_t size);
   static void relu(const float* input, float* output, size_t size);
+  // relu backward, x_grad[i] += output_grad[i] * (x_data[i] > 0 ? 1 : 0)
+  static void reluBackward(const float* output_grad, const float* x_data,
+                           float* x_grad, size_t size);
   static void sum(float* input, float* output, std::vector<size_t> shape,
                   size_t axis);
   // sum all elements

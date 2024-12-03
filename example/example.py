@@ -33,9 +33,9 @@ print("y: ", y)
 z = tl.matmul(x, y)
 
 print("z: ", z)
-w = tl.sum(z)
+w = tl.relu(z)
 print("w: ", w)
-l = tl.log(w)
+l = tl.exp(w)
 print("l: ", l)
 
 init_grad_l = tl.ones(l.shape, device, requires_grad=False)

@@ -507,7 +507,8 @@ void SinBackward::apply() {
         x_grad[i] += output_grad[i] * std::cos(x->data()[i]);
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::sinBackward(output_grad, x->data(), x_grad,
+                              x_grad_tensor->size());
     }
   }
 }
@@ -541,7 +542,8 @@ void CosBackward::apply() {
         x_grad[i] -= output_grad[i] * std::sin(x->data()[i]);
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::cosBackward(output_grad, x->data(), x_grad,
+                              x_grad_tensor->size());
     }
   }
 }
@@ -575,7 +577,8 @@ void ReluBackward::apply() {
         x_grad[i] += output_grad[i] * (x->data()[i] > 0);
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::reluBackward(output_grad, x->data(), x_grad,
+                               x_grad_tensor->size());
     }
   }
 }

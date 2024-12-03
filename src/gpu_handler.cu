@@ -280,6 +280,25 @@ void GPUHandler::sin(const float* input, float* output, size_t size) {
   checkCudaErrors(cudaDeviceSynchronize());
 }
 
+// sin backward
+__global__ void sinBackwardKernel(const float* output_grad, const float* x_data,
+                                  float* x_grad, size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    x_grad[idx] += output_grad[idx] * cosf(x_data[idx]);  // Gradient of sin(x)
+  }
+}
+
+void GPUHandler::sinBackward(const float* output_grad, const float* x_data,
+                             float* x_grad, size_t size) {
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+
+  sinBackwardKernel<<<gridSize, blockSize>>>(output_grad, x_data, x_grad, size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
 // cos
 __global__ void elementWiseCos(const float* input, float* output, size_t size) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;
@@ -293,6 +312,24 @@ void GPUHandler::cos(const float* input, float* output, size_t size) {
   int gridSize = (size + blockSize - 1) / blockSize;
 
   elementWiseCos<<<gridSize, blockSize>>>(input, output, size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
+__global__ void cosBackwardKernel(const float* output_grad, const float* x_data,
+                                  float* x_grad, size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    x_grad[idx] -= output_grad[idx] * sinf(x_data[idx]);  // Gradient of cos(x)
+  }
+}
+
+void GPUHandler::cosBackward(const float* output_grad, const float* x_data,
+                             float* x_grad, size_t size) {
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+
+  cosBackwardKernel<<<gridSize, blockSize>>>(output_grad, x_data, x_grad, size);
 
   checkCudaErrors(cudaDeviceSynchronize());
 }
@@ -311,6 +348,27 @@ void GPUHandler::relu(const float* input, float* output, size_t size) {
   int gridSize = (size + blockSize - 1) / blockSize;
 
   elementWiseReLU<<<gridSize, blockSize>>>(input, output, size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
+// relu backward
+__global__ void reluBackwardKernel(const float* output_grad,
+                                   const float* x_data, float* x_grad,
+                                   size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    x_grad[idx] += output_grad[idx] * (x_data[idx] > 0 ? 1 : 0);
+  }
+}
+
+void GPUHandler::reluBackward(const float* output_grad, const float* x_data,
+                              float* x_grad, size_t size) {
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+
+  reluBackwardKernel<<<gridSize, blockSize>>>(output_grad, x_data, x_grad,
+                                              size);
 
   checkCudaErrors(cudaDeviceSynchronize());
 }
