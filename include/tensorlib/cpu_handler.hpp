@@ -43,6 +43,10 @@ class CPUHandler {
                      size_t axis);
   static void argmin(float* X, float* Z, std::vector<size_t> x_shape,
                      size_t axis);
+  static void softmax(float* X, float* Z, std::vector<size_t> x_shape,
+                      size_t axis);
+  static void cross_entropy(float* X, float* Y, float* Z,
+                            std::vector<size_t> x_shape);
 };
 
 #endif

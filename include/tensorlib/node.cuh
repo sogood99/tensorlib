@@ -183,4 +183,19 @@ class SelectAllBackward : public Node {
   Device device_;
 };
 
+class SoftmaxBackward : public Node {
+ public:
+  SoftmaxBackward(variable output, variable x, size_t axis);
+  void apply() override;
+
+ private:
+  size_t axis_;
+};
+
+class CrossEntropyBackward : public Node {
+ public:
+  CrossEntropyBackward(variable output, variable x, variable y);
+  void apply() override;
+};
+
 #endif

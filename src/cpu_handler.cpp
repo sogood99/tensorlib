@@ -357,3 +357,61 @@ void CPUHandler::argmin(float* X, float* Z, std::vector<size_t> x_shape,
     }
   }
 }
+
+// softmax of a tensor X along an axis and store it in Z
+void CPUHandler::softmax(float* X, float* Z, std::vector<size_t> x_shape,
+                         size_t axis) {
+  std::vector<size_t> strides = calculate_strides(x_shape);
+  size_t size = calculate_size(x_shape);
+
+#pragma omp parallel for
+  for (size_t i = 0; i < size / x_shape[axis]; i++) {
+    size_t offset = calculate_index_after_add_axis(i, axis, x_shape);
+
+    // for numerical stability
+    float max_val = -INFINITY;
+    for (size_t j = 0; j < x_shape[axis]; j++) {
+      max_val = std::max(max_val, X[offset + j * strides[axis]]);
+    }
+
+    float sum = 0.0f;
+    for (size_t j = 0; j < x_shape[axis]; j++) {
+      sum += std::exp(X[offset + j * strides[axis]] - max_val);
+    }
+
+    for (size_t j = 0; j < x_shape[axis]; j++) {
+      Z[offset + j * strides[axis]] =
+          std::exp(X[offset + j * strides[axis]] - max_val) / sum;
+    }
+  }
+}
+
+// softmax cross entropy loss between X and Y
+void CPUHandler::cross_entropy(float* X, float* Y, float* Z,
+                               std::vector<size_t> x_shape) {
+  size_t batch_size = x_shape[0], num_classes = x_shape[1];
+
+#pragma omp parallel for
+  for (size_t i = 0; i < batch_size; ++i) {
+    float *x_batch = X + i * num_classes, *y_batch = Y + i * num_classes,
+          *z_batch = Z + i;
+
+    float max_val = -INFINITY;
+    for (size_t j = 0; j < num_classes; ++j) {
+      max_val = std::max(max_val, x_batch[j]);
+    }
+
+    float sum = 0.0f;
+    for (size_t j = 0; j < num_classes; ++j) {
+      sum += std::exp(x_batch[j] - max_val);
+    }
+    float log_sum = max_val + std::log(sum);
+
+    float loss = 0.0f;
+    for (size_t j = 0; j < num_classes; ++j) {
+      loss -= y_batch[j] * (x_batch[j] - log_sum);
+    }
+
+    *z_batch = loss;
+  }
+}

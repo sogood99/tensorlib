@@ -150,4 +150,8 @@ PYBIND11_MODULE(tensorlib, m) {
   m.def(
       "argmin", [](variable x, size_t axis) { return argmin(x, axis); },
       py::arg("tensor"), py::arg("axis"), "Argmin along axis");
+  m.def("softmax", &softmax, py::arg("tensor"), py::arg("axis"),
+        "Softmax along axis");
+  m.def("cross_entropy", &cross_entropy, py::arg("x"), py::arg("y"),
+        "Cross entropy loss");
 }

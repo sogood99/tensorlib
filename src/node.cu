@@ -915,3 +915,132 @@ void SelectAllBackward::apply() {
     }
   }
 }
+
+SoftmaxBackward::SoftmaxBackward(variable output, variable x, size_t axis) {
+  inputs_.push_back(x);
+  output_ = output;
+  axis_ = axis;
+
+  name_ = "SoftmaxBackward";
+
+  set_next_edges();
+}
+
+void SoftmaxBackward::apply() {
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0], z = output_.lock();
+
+  Device device = x->device();
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    float *x_grad = x_grad_tensor->data(), *z_data = z->data();
+
+    const std::vector<size_t>& stride = x->stride();
+
+    if (device == Device::CPU) {
+      size_t size_squashed = x->size() / x->shape()[axis_];
+      for (size_t k = 0; k < size_squashed; k++) {
+        size_t offset = calculate_index_after_add_axis(k, axis_, x->shape());
+
+#pragma omp parallel for
+        for (size_t j = 0; j < x->shape()[axis_]; j++) {
+          for (size_t i = 0; i < x->shape()[axis_]; i++) {
+            // ds_i/dx_j = s_i * (delta_ij - s_j)
+            x_grad[offset + j * stride[axis_]] +=
+                output_grad[offset + i * stride[axis_]] *
+                z_data[offset + i * stride[axis_]] *
+                ((i == j ? 1 : 0) - z_data[offset + j * stride[axis_]]);
+          }
+        }
+      }
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+}
+
+CrossEntropyBackward::CrossEntropyBackward(variable output, variable x,
+                                           variable y) {
+  inputs_.push_back(x);
+  inputs_.push_back(y);
+  output_ = output;
+
+  name_ = "CrossEntropyBackward";
+
+  set_next_edges();
+}
+
+void CrossEntropyBackward::apply() {
+  variable output_grad_tensor = output_.lock()->autograd_meta().grad_;
+  float* output_grad = output_grad_tensor->data();
+
+  variable x = inputs_[0], y = inputs_[1];
+
+  Device device = x->device();
+
+  size_t batch_size = x->shape()[0], num_classes = x->shape()[1];
+  float* t_softmax = nullptr;
+  if (device == Device::CPU) {
+    t_softmax = new float[batch_size * num_classes];
+    CPUHandler::softmax(x->data(), t_softmax, x->shape(), 1);
+  } else if (device == Device::GPU) {
+    cudaMalloc(&t_softmax, batch_size * num_classes * sizeof(float));
+    throw std::runtime_error("Not implemented for GPU");
+    // GPUHandler::softmax(x->data(), t_softmax, x->shape(), 1);
+  }
+
+  if (x->requires_grad()) {
+    variable x_grad_tensor = x->autograd_meta().grad_;
+    float* x_grad = x_grad_tensor->data();
+
+    if (device == Device::CPU) {
+      for (size_t b = 0; b < batch_size; b++) {
+        float *x_grad_batch = x_grad + b * num_classes,
+              *t_softmax_batch = t_softmax + b * num_classes,
+              *y_batch = y->data() + b * num_classes;
+        for (size_t i = 0; i < num_classes; i++) {
+          std::cout << "t_softmax_batch[" << i << "] = " << t_softmax_batch[i]
+                    << std::endl;
+        }
+        for (size_t i = 0; i < num_classes; i++) {
+          float y_sum = 0.;
+          for (size_t j = 0; j < num_classes; j++) {
+            y_sum += y_batch[j];
+          }
+          x_grad_batch[i] +=
+              output_grad[b] * (-y_batch[i] + t_softmax_batch[i] * y_sum);
+        }
+      }
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+
+  if (y->requires_grad()) {
+    variable y_grad_tensor = y->autograd_meta().grad_;
+    float* y_grad = y_grad_tensor->data();
+    if (device == Device::CPU) {
+      for (size_t b = 0; b < batch_size; b++) {
+        for (size_t i = 0; i < num_classes; i++) {
+          float y_sum = 0.;
+          for (size_t j = 0; j < num_classes; j++) {
+            y_sum += y->data()[b * num_classes + j];
+          }
+          y_grad[b * num_classes + i] +=
+              output_grad[b] * (-std::log(t_softmax[b * num_classes + i]));
+        }
+      }
+    } else if (device == Device::GPU) {
+      std::runtime_error("Not implemented for GPU");
+    }
+  }
+
+  if (device == Device::CPU) {
+    delete[] t_softmax;
+  } else if (device == Device::GPU) {
+    cudaFree(t_softmax);
+  }
+}

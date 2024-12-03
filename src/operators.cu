@@ -805,3 +805,50 @@ variable argmin(variable x, size_t axis, bool keepdims) {
 
   return z;
 }
+
+variable softmax(variable x, size_t axis) {
+  Device device = x->device();
+
+  auto z = std::make_shared<Tensor>(x->shape(), device, x->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::softmax(x->data(), z->data(), x->shape(), axis);
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad()) {
+    z->autograd_meta().set_grad_fn(
+        std::make_shared<SoftmaxBackward>(z, x, axis));
+  }
+
+  return z;
+}
+
+variable cross_entropy(variable x, variable y) {
+  check_tensor_device(x, y);
+
+  if (x->shape().size() != 2 || y->shape().size() != 2 ||
+      x->shape()[0] != y->shape()[0] || x->shape()[1] != y->shape()[1]) {
+    throw std::runtime_error("Incompatible shape");
+  }
+
+  Device device = x->device();
+  size_t batch_size = x->shape()[0];
+
+  auto z = std::make_shared<Tensor>(std::vector<size_t>{batch_size}, device,
+                                    x->requires_grad() || y->requires_grad());
+
+  if (device == Device::CPU) {
+    CPUHandler::cross_entropy(x->data(), y->data(), z->data(), x->shape());
+  } else if (device == Device::GPU) {
+    throw std::runtime_error("Not implemented for GPU");
+  }
+
+  if (x->requires_grad() || y->requires_grad()) {
+    z->autograd_meta().set_grad_fn(
+        std::make_shared<CrossEntropyBackward>(z, x, y));
+  }
+
+  return z;
+}

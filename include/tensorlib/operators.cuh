@@ -40,5 +40,10 @@ variable min(variable x, size_t axis, bool keepdims = false);
 variable min(variable x, bool keepdims = false);
 variable argmax(variable x, size_t axis, bool keepdims = false);
 variable argmin(variable x, size_t axis, bool keepdims = false);
+variable softmax(variable x, size_t axis);
+// applies softmax then cross entropy to the input,
+// x should be of size (batch_size, num_classes), y should be of size
+// (batch_size, num_classes)
+variable cross_entropy(variable x, variable y);
 
 #endif
