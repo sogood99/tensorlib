@@ -584,7 +584,7 @@ variable mean(variable x, size_t axis, bool keepdims) {
   if (device == Device::CPU) {
     CPUHandler::mean(x->data(), z->data(), x->shape(), axis);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::mean(x->data(), z->data(), x->shape(), axis);
   }
 
   if (x->requires_grad()) {
@@ -614,7 +614,7 @@ variable mean(variable x, bool keepdims) {
   if (device == Device::CPU) {
     CPUHandler::mean(x->data(), z->data(), x->size());
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::mean(x->data(), z->data(), x->size());
   }
 
   if (x->requires_grad()) {

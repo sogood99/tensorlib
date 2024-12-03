@@ -139,14 +139,14 @@ void GPUHandler::select_idx(float* X, float* Z, std::vector<size_t> x_shape,
 
 __global__ void sum_along_axis(const float* X, float* Z, size_t input_size,
                                size_t output_size, size_t axis_stride,
-                               size_t axis_size) {
+                               size_t axis_size, float factor = 1.0) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx >= input_size) return;
 
   size_t output_idx =
       ((idx / axis_size / axis_stride) * axis_stride + idx % axis_stride);
 
-  atomicAdd(&Z[output_idx], X[idx]);
+  atomicAdd(&Z[output_idx], X[idx] * factor);
 }
 
 void GPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
@@ -164,10 +164,11 @@ void GPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
   checkCudaErrors(cudaDeviceSynchronize());
 }
 
-__global__ void sumAll(const float* X, float* Z, size_t size) {
+__global__ void sumAll(const float* X, float* Z, size_t size,
+                       float factor = 1.0) {
   size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
   if (idx < size) {
-    atomicAdd(&Z[0], X[idx]);
+    atomicAdd(&Z[0], X[idx] * factor);
   }
 }
 
@@ -182,15 +183,41 @@ void GPUHandler::sum(float* X, float* Z, size_t size) {
 
 __global__ void add_axis_kernel(const float* output_grad, float* x_grad,
                                 size_t input_size, size_t output_size,
-                                size_t axis_stride, size_t axis_size) {
+                                size_t axis_stride, size_t axis_size,
+                                float factor) {
   unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
 
   if (i < input_size) {
     size_t output_idx =
         ((i / axis_size / axis_stride) * axis_stride + i % axis_stride);
 
-    x_grad[i] += output_grad[output_idx];
+    x_grad[i] += output_grad[output_idx] * factor;
   }
+}
+
+void GPUHandler::mean(float* X, float* Z, std::vector<size_t> x_shape,
+                      size_t axis) {
+  size_t input_size = calculate_size(x_shape);
+  size_t output_size = input_size / x_shape[axis];
+  std::vector<size_t> strides = calculate_strides(x_shape);
+  size_t axis_stride = strides[axis];
+  size_t axis_size = x_shape[axis];
+
+  int threads = 256, blocks = (input_size + threads - 1) / threads;
+
+  sum_along_axis<<<blocks, threads>>>(X, Z, input_size, output_size,
+                                      axis_stride, axis_size, 1.0 / axis_size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
+void GPUHandler::mean(float* X, float* Z, size_t size) {
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+
+  sumAll<<<gridSize, blockSize>>>(X, Z, size, 1.0 / size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
 }
 
 void GPUHandler::add_axis(float* x_grad, const float* output_grad,
@@ -203,7 +230,8 @@ void GPUHandler::add_axis(float* x_grad, const float* output_grad,
 
   int threads = 256, blocks = (output_size + threads - 1) / threads;
   add_axis_kernel<<<blocks, threads>>>(output_grad, x_grad, input_size,
-                                       output_size, axis_stride, axis_size);
+                                       output_size, axis_stride, axis_size,
+                                       factor);
 }
 
 __global__ void set_all_kernel(float* x, const float* val, float factor,

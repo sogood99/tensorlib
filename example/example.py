@@ -1,5 +1,4 @@
 import tensorlib as tl
-import numpy as np
 import sys
 
 if len(sys.argv) > 1:
@@ -12,7 +11,7 @@ if len(sys.argv) > 1:
         sys.exit(1)
 
 x = tl.Tensor(
-    np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0]).reshape([2, 1, 3]),
+    [[[1.0, 2.0, 3.0], [-2.0, 1.0, 2.1]], [[2.0, 3.0, 7.0], [2.0, -1.0, -2.0]]],
     device,
     requires_grad=True,
 )
@@ -34,15 +33,9 @@ print("y: ", y)
 z = tl.matmul(x, y)
 
 print("z: ", z)
-w = z + tl.Tensor(
-    np.array([1.0, 2.0, 3.0, 4.0]).reshape([2, 2, 1]),
-    device,
-    requires_grad=False,
-)
-print(w.shape)
-
+w = tl.mean(z)
 print("w: ", w)
-l = tl.sigmoid(w)
+l = tl.log(w)
 print("l: ", l)
 
 init_grad_l = tl.ones(l.shape, device, requires_grad=False)

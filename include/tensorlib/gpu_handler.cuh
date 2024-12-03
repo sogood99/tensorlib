@@ -69,6 +69,10 @@ class GPUHandler {
                   size_t axis);
   // sum all elements
   static void sum(float* input, float* output, size_t size);
+  static void mean(float* input, float* output, std::vector<size_t> shape,
+                   size_t axis);
+  // mean all elements
+  static void mean(float* input, float* output, size_t size);
   static void add_axis(float* x_grad, const float* output_grad,
                        std::vector<size_t> x_shape,
                        std::vector<size_t> x_stride, size_t axis,
