@@ -473,7 +473,7 @@ void ExpBackward::apply() {
         x_grad[i] += output_grad[i] * std::exp(x->data()[i]);
       }
     } else if (device == Device::GPU) {
-      std::runtime_error("Not implemented for GPU");
+      GPUHandler::expMul(x->data(), x_grad, output_grad, x_grad_tensor->size());
     }
   }
 }

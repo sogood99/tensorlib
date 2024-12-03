@@ -269,6 +269,27 @@ void GPUHandler::exp(const float* input, float* output, size_t size) {
   checkCudaErrors(cudaDeviceSynchronize());
 }
 
+// expMul
+__global__ void expMulKernel(const float* x_data, float* x_grad,
+                             const float* output_grad, size_t size) {
+  int idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx < size) {
+    x_grad[idx] += output_grad[idx] * expf(x_data[idx]);
+  }
+}
+
+// x_grad += output_grad * exp(x_data)
+void GPUHandler::expMul(const float* x_data, float* x_grad,
+                        const float* output_grad, size_t size) {
+  cublasHandle_t handle = getInstance().getHandle();
+
+  int blockSize = 256;
+  int gridSize = (size + blockSize - 1) / blockSize;
+  expMulKernel<<<gridSize, blockSize>>>(x_data, x_grad, output_grad, size);
+
+  checkCudaErrors(cudaDeviceSynchronize());
+}
+
 // sin
 __global__ void elementWiseSin(const float* input, float* output, size_t size) {
   int idx = blockIdx.x * blockDim.x + threadIdx.x;

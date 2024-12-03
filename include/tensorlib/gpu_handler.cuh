@@ -46,6 +46,8 @@ class GPUHandler {
   static void logBackward(const float* output_grad, const float* x_data,
                           float* x_grad, size_t size);
   static void exp(const float* input, float* output, size_t size);
+  static void expMul(const float* x_data, float* x_grad,
+                     const float* output_grad, size_t size);
   static void sin(const float* input, float* output, size_t size);
   static void cos(const float* input, float* output, size_t size);
   static void relu(const float* input, float* output, size_t size);
