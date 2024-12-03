@@ -327,9 +327,7 @@ void CPUHandler::argmax(float* X, float* Z, std::vector<size_t> x_shape,
   for (size_t i = 0; i < input_size; ++i) {
     size_t output_idx = calculate_index_after_drop_axis(i, axis, x_shape);
     if (X[i] > max_values[output_idx]) {
-      size_t new_idx =
-          calculate_index_after_add_axis(output_idx, axis, x_shape);
-      size_t max_idx = (i - new_idx) / strides[axis];
+      size_t max_idx = i / strides[axis] % x_shape[axis];
       max_values[output_idx] = X[i];
       Z[output_idx] = max_idx;
     }
@@ -349,9 +347,7 @@ void CPUHandler::argmin(float* X, float* Z, std::vector<size_t> x_shape,
   for (size_t i = 0; i < input_size; ++i) {
     size_t output_idx = calculate_index_after_drop_axis(i, axis, x_shape);
     if (X[i] < min_values[output_idx]) {
-      size_t new_idx =
-          calculate_index_after_add_axis(output_idx, axis, x_shape);
-      size_t min_idx = (i - new_idx) / strides[axis];
+      size_t min_idx = i / strides[axis] % x_shape[axis];
       min_values[output_idx] = X[i];
       Z[output_idx] = min_idx;
     }
