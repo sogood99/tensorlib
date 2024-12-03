@@ -1002,10 +1002,6 @@ void CrossEntropyBackward::apply() {
               *t_softmax_batch = t_softmax + b * num_classes,
               *y_batch = y->data() + b * num_classes;
         for (size_t i = 0; i < num_classes; i++) {
-          std::cout << "t_softmax_batch[" << i << "] = " << t_softmax_batch[i]
-                    << std::endl;
-        }
-        for (size_t i = 0; i < num_classes; i++) {
           float y_sum = 0.;
           for (size_t j = 0; j < num_classes; j++) {
             y_sum += y_batch[j];
