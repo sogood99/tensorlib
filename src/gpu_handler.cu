@@ -137,53 +137,31 @@ void GPUHandler::select_idx(float* X, float* Z, std::vector<size_t> x_shape,
   checkCudaErrors(cudaDeviceSynchronize());
 }
 
-__device__ size_t d_calculate_index_after_drop_axis(size_t index, size_t axis,
-                                                    const size_t* shape,
-                                                    size_t nDims) {
-  size_t newIndex = 0;
-  size_t stride = 1;
+__global__ void sum_along_axis(const float* X, float* Z, size_t input_size,
+                               size_t output_size, size_t axis_stride,
+                               size_t axis_size) {
+  size_t idx = blockIdx.x * blockDim.x + threadIdx.x;
+  if (idx >= input_size) return;
 
-  for (int i = nDims; i > 0; i--) {
-    if (i - 1 != axis) {
-      size_t dimSize = shape[i - 1];
-      size_t currentDimIndex = index % dimSize;
-      newIndex += currentDimIndex * stride;
-      stride *= dimSize;
-    }
-    index /= shape[i - 1];
-  }
-  return newIndex;
-}
+  size_t output_idx =
+      ((idx / axis_size / axis_stride) * axis_stride + idx % axis_stride);
 
-__global__ void sumAlongAxisKernel(float* X, float* Z, const size_t* shape,
-                                   size_t axis, size_t input_size,
-                                   size_t nDims) {
-  unsigned int i = blockIdx.x * blockDim.x + threadIdx.x;
-
-  if (i < input_size) {
-    size_t output_idx =
-        d_calculate_index_after_drop_axis(i, axis, shape, nDims);
-    atomicAdd(&Z[output_idx], X[i]);
-  }
+  atomicAdd(&Z[output_idx], X[idx]);
 }
 
 void GPUHandler::sum(float* X, float* Z, std::vector<size_t> x_shape,
                      size_t axis) {
   size_t input_size = calculate_size(x_shape);
   size_t output_size = input_size / x_shape[axis];
+  std::vector<size_t> strides = calculate_strides(x_shape);
+  size_t axis_stride = strides[axis];
+  size_t axis_size = x_shape[axis];
 
-  size_t* d_x_shape;
-  cudaMalloc(&d_x_shape, x_shape.size() * sizeof(size_t));
-  cudaMemcpy(d_x_shape, x_shape.data(), x_shape.size() * sizeof(size_t),
-             cudaMemcpyHostToDevice);
+  int threads = 256, blocks = (input_size + threads - 1) / threads;
 
-  int blockSize = 256;
-  int numBlocks = (input_size + blockSize - 1) / blockSize;
-  cudaMemset(Z, 0, output_size * sizeof(float));
-  sumAlongAxisKernel<<<numBlocks, blockSize>>>(X, Z, d_x_shape, axis,
-                                               input_size, output_size);
-
-  cudaFree(d_x_shape);
+  sum_along_axis<<<blocks, threads>>>(X, Z, input_size, output_size,
+                                      axis_stride, axis_size);
+  checkCudaErrors(cudaDeviceSynchronize());
 }
 
 __device__ size_t d_calculate_index_after_add_axis(size_t index, size_t axis,

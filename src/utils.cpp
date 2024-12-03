@@ -18,20 +18,11 @@ size_t convert_to_index(size_t index, variable t) {
 // calculate index after droping the axis dimension
 size_t calculate_index_after_drop_axis(size_t index, size_t axis,
                                        const std::vector<size_t>& shape) {
-  size_t newIndex = 0;
-  size_t stride = 1;
-  size_t nDims = shape.size();
+  std::vector<size_t> strides = calculate_strides(shape);
+  size_t axis_size = shape[axis];
+  size_t axis_stride = strides[axis];
 
-  for (size_t i = nDims; i > 0; i--) {
-    if (i - 1 != axis) {
-      size_t dimSize = shape[i - 1];
-      size_t currentDimIndex = index % dimSize;
-      newIndex += currentDimIndex * stride;
-      stride *= dimSize;
-    }
-    index /= shape[i - 1];
-  }
-  return newIndex;
+  return (index / axis_size / axis_stride) * axis_stride + index % axis_stride;
 }
 
 size_t calculate_index_after_add_axis(size_t index, size_t axis,
