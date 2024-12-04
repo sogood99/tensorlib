@@ -6,7 +6,10 @@ from sklearn.datasets import load_iris
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 
-device = tl.Device.CPU
+if len(sys.argv) > 1 and sys.argv[1] == "gpu":
+    device = tl.Device.GPU
+else:
+    device = tl.Device.CPU
 
 # Hyperparameters
 input_size = 4  # There are 4 features in the Iris dataset
