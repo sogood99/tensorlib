@@ -16,7 +16,7 @@ input_size = 28 * 28
 hidden_size = 128
 output_size = 10
 learning_rate = 0.1
-epochs = 1000
+epochs = 200
 seed = 1234
 
 # Load MNIST dataset

@@ -16,7 +16,7 @@ input_size = 4  # There are 4 features in the Iris dataset
 hidden_size = 5
 output_size = 3
 learning_rate = 0.01
-epochs = 100
+epochs = 1000
 seed = 1234
 
 # Load Iris dataset
@@ -51,10 +51,10 @@ y_test = tl.Tensor(
     requires_grad=False,
 )
 
-W1 = tl.randn([input_size, hidden_size], seed=seed, requires_grad=True)
-b1 = tl.zeros([hidden_size], requires_grad=True)
-W2 = tl.randn([hidden_size, output_size], seed=seed, requires_grad=True)
-b2 = tl.zeros([output_size], requires_grad=True)
+W1 = tl.randn([input_size, hidden_size], seed=seed, device=device, requires_grad=True)
+b1 = tl.zeros([hidden_size], device=device, requires_grad=True)
+W2 = tl.randn([hidden_size, output_size], seed=seed, device=device, requires_grad=True)
+b2 = tl.zeros([output_size], device=device, requires_grad=True)
 
 
 def forward(X):
