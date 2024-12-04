@@ -17,6 +17,7 @@ hidden_size = 128
 output_size = 10
 learning_rate = 0.1
 epochs = 1000
+seed = 1234
 
 # Load MNIST dataset
 mnist = fetch_openml("mnist_784", parser="auto")
@@ -47,9 +48,9 @@ X_test = tl.Tensor(X_test, device=device, requires_grad=False)
 y_test = tl.Tensor(y_test, device=device, requires_grad=False)
 
 # Initialize weights and biases
-W1 = tl.randn([input_size, hidden_size], device=device, requires_grad=True)
+W1 = tl.randn([input_size, hidden_size], seed=seed, device=device, requires_grad=True)
 b1 = tl.zeros([hidden_size], device=device, requires_grad=True)
-W2 = tl.randn([hidden_size, output_size], device=device, requires_grad=True)
+W2 = tl.randn([hidden_size, output_size], seed=seed, device=device, requires_grad=True)
 b2 = tl.zeros([output_size], device=device, requires_grad=True)
 
 
@@ -103,7 +104,7 @@ for epoch in range(epochs):
         print(f"Test Accuracy: {test_accuracy[-1]:.3f}")
 
 # Plot results if file output is provided
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:
     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
     ax[0].plot(train_loss, label="Train Loss")
     ax[0].plot([i for i in range(0, epochs, 10)], test_loss, label="Test Loss")
@@ -116,6 +117,6 @@ if len(sys.argv) > 1:
     ax[1].plot([i for i in range(0, epochs, 10)], test_accuracy, label="Test Accuracy")
     ax[1].set_title("Accuracy")
     ax[1].legend()
-    fig.savefig(sys.argv[1])
+    fig.savefig(sys.argv[2])
 
 print("Training completed.")

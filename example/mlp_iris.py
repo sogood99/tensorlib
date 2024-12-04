@@ -17,6 +17,7 @@ hidden_size = 5
 output_size = 3
 learning_rate = 0.01
 epochs = 100
+seed = 1234
 
 # Load Iris dataset
 iris = load_iris()
@@ -50,9 +51,9 @@ y_test = tl.Tensor(
     requires_grad=False,
 )
 
-W1 = tl.randn([input_size, hidden_size], requires_grad=True)
+W1 = tl.randn([input_size, hidden_size], seed=seed, requires_grad=True)
 b1 = tl.zeros([hidden_size], requires_grad=True)
-W2 = tl.randn([hidden_size, output_size], requires_grad=True)
+W2 = tl.randn([hidden_size, output_size], seed=seed, requires_grad=True)
 b2 = tl.zeros([output_size], requires_grad=True)
 
 
@@ -99,7 +100,7 @@ for epoch in range(epochs):
         test_accuracy.append(np.mean(pred_class == true_class))
         print(f"Test Accuracy: {test_accuracy[-1]}")
 
-if len(sys.argv) > 1:
+if len(sys.argv) > 2:
     fig, ax = plt.subplots(1, 2, figsize=(12, 6))
     ax[0].plot(train_loss, label="Train Loss")
     ax[0].plot([i for i in range(0, epochs, 10)], test_loss, label="Test Loss")
@@ -112,6 +113,6 @@ if len(sys.argv) > 1:
     ax[1].plot([i for i in range(0, epochs, 10)], test_accuracy, label="Test Accuracy")
     ax[1].set_title("Accuracy")
     ax[1].legend()
-    fig.savefig(sys.argv[1])
+    fig.savefig(sys.argv[2])
 
 print("Training completed.")
