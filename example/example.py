@@ -1,13 +1,10 @@
 import tensorlib as tl
 import sys
 
-if len(sys.argv) > 1:
-    if sys.argv[1] == "cpu":
-        device = tl.Device.CPU
-    elif sys.argv[1] == "gpu":
-        device = tl.Device.GPU
-    else:
-        device = tl.Device.CPU
+if len(sys.argv) > 1 and sys.argv[1] == "gpu":
+    device = tl.Device.GPU
+else:
+    device = tl.Device.CPU
 
 x = tl.Tensor(
     [[1.0, 2.0, 3.0, -2.0], [4.0, 5.0, 6.0, 1.0], [7.0, 8.0, 9.0, 1.0]],
@@ -17,7 +14,9 @@ x = tl.Tensor(
 
 y = tl.Tensor(
     [
-        [1.0, 2.0, 3.0, -6.0], [4.0, 5.0, 6.0, 1.0], [7.0, 8.0, 9.0, 1.0],
+        [1.0, 2.0, 3.0, -6.0],
+        [4.0, 5.0, 6.0, 1.0],
+        [7.0, 8.0, 9.0, 1.0],
     ],
     device,
     requires_grad=True,
@@ -31,7 +30,7 @@ print("y: ", y)
 z = tl.cross_entropy(x, y)
 
 print("z: ", z)
-w = tl.relu(z) / 10.
+w = tl.relu(z) / 10.0
 print("w: ", w)
 l = tl.exp(w)
 print("l: ", l)

@@ -775,7 +775,7 @@ variable argmax(variable x, size_t axis, bool keepdims) {
   if (device == Device::CPU) {
     CPUHandler::argmax(x->data(), z->data(), x->shape(), axis);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::argmax(x->data(), z->data(), x->shape(), axis);
   }
 
   return z;
@@ -801,7 +801,7 @@ variable argmin(variable x, size_t axis, bool keepdims) {
   if (device == Device::CPU) {
     CPUHandler::argmin(x->data(), z->data(), x->shape(), axis);
   } else if (device == Device::GPU) {
-    throw std::runtime_error("Not implemented for GPU");
+    GPUHandler::argmin(x->data(), z->data(), x->shape(), axis);
   }
 
   return z;

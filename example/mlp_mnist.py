@@ -7,13 +7,16 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.datasets import fetch_openml
 
 # Device selection
-device = tl.Device.CPU
+if len(sys.argv) > 1 and sys.argv[1] == "gpu":
+    device = tl.Device.GPU
+else:
+    device = tl.Device.CPU
 
 input_size = 28 * 28
 hidden_size = 128
 output_size = 10
-learning_rate = 0.01
-epochs = 100
+learning_rate = 0.1
+epochs = 1000
 
 # Load MNIST dataset
 mnist = fetch_openml("mnist_784", parser="auto")
@@ -44,10 +47,10 @@ X_test = tl.Tensor(X_test, device=device, requires_grad=False)
 y_test = tl.Tensor(y_test, device=device, requires_grad=False)
 
 # Initialize weights and biases
-W1 = tl.randn([input_size, hidden_size], requires_grad=True)
-b1 = tl.zeros([hidden_size], requires_grad=True)
-W2 = tl.randn([hidden_size, output_size], requires_grad=True)
-b2 = tl.zeros([output_size], requires_grad=True)
+W1 = tl.randn([input_size, hidden_size], device=device, requires_grad=True)
+b1 = tl.zeros([hidden_size], device=device, requires_grad=True)
+W2 = tl.randn([hidden_size, output_size], device=device, requires_grad=True)
+b2 = tl.zeros([output_size], device=device, requires_grad=True)
 
 
 # Forward pass

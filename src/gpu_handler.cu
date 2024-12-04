@@ -828,13 +828,17 @@ void GPUHandler::cross_entropy(const float* X, const float* Y, float* Z,
   size_t block_size = 256;
   size_t num_blocks = (batch_size + block_size - 1) / block_size;
 
-  cross_entropy_kernel<<<num_blocks, block_size>>>(X, Y, Z, batch_size, num_classes);
+  cross_entropy_kernel<<<num_blocks, block_size>>>(X, Y, Z, batch_size,
+                                                   num_classes);
 
   cudaDeviceSynchronize();
 }
 
-__global__ void cross_entropy_backward_x_kernel(const float* t_softmax, const float* y, float* x_grad,
-                                                const float* output_grad, size_t batch_size, size_t num_classes) {
+__global__ void cross_entropy_backward_x_kernel(const float* t_softmax,
+                                                const float* y, float* x_grad,
+                                                const float* output_grad,
+                                                size_t batch_size,
+                                                size_t num_classes) {
   size_t b = blockIdx.x * blockDim.x + threadIdx.x;
   if (b < batch_size) {
     const float* t_softmax_batch = t_softmax + b * num_classes;
@@ -847,39 +851,127 @@ __global__ void cross_entropy_backward_x_kernel(const float* t_softmax, const fl
     }
 
     for (size_t i = 0; i < num_classes; ++i) {
-      x_grad_batch[i] += output_grad[b] * (-y_batch[i] + t_softmax_batch[i] * y_sum);
+      x_grad_batch[i] +=
+          output_grad[b] * (-y_batch[i] + t_softmax_batch[i] * y_sum);
     }
   }
 }
 
-void GPUHandler::cross_entropy_backward_x(const float* t_softmax, const float* y, float* x_grad,
-                                          const float* output_grad, size_t batch_size, size_t num_classes) {
+void GPUHandler::cross_entropy_backward_x(const float* t_softmax,
+                                          const float* y, float* x_grad,
+                                          const float* output_grad,
+                                          size_t batch_size,
+                                          size_t num_classes) {
   size_t threads_per_block = 256;
   size_t num_blocks = (batch_size + threads_per_block - 1) / threads_per_block;
 
-  cross_entropy_backward_x_kernel<<<num_blocks, threads_per_block>>>(t_softmax, y, x_grad, output_grad, batch_size, num_classes);
+  cross_entropy_backward_x_kernel<<<num_blocks, threads_per_block>>>(
+      t_softmax, y, x_grad, output_grad, batch_size, num_classes);
 
   cudaDeviceSynchronize();
 }
 
-__global__ void cross_entropy_backward_y_kernel(const float* t_softmax, float* y_grad,
-                                                const float* output_grad, size_t batch_size, size_t num_classes) {
+__global__ void cross_entropy_backward_y_kernel(const float* t_softmax,
+                                                float* y_grad,
+                                                const float* output_grad,
+                                                size_t batch_size,
+                                                size_t num_classes) {
   size_t b = blockIdx.x * blockDim.x + threadIdx.x;
   if (b < batch_size) {
     float* y_grad_batch = y_grad + b * num_classes;
 
     for (size_t i = 0; i < num_classes; ++i) {
-      y_grad_batch[i] += output_grad[b] * (-logf(t_softmax[b * num_classes + i]));
+      y_grad_batch[i] +=
+          output_grad[b] * (-logf(t_softmax[b * num_classes + i]));
     }
   }
 }
 
 void GPUHandler::cross_entropy_backward_y(const float* t_softmax, float* y_grad,
-                                          const float* output_grad, size_t batch_size, size_t num_classes) {
+                                          const float* output_grad,
+                                          size_t batch_size,
+                                          size_t num_classes) {
   size_t threads_per_block = 256;
   size_t num_blocks = (batch_size + threads_per_block - 1) / threads_per_block;
 
-  cross_entropy_backward_y_kernel<<<num_blocks, threads_per_block>>>(t_softmax, y_grad, output_grad, batch_size, num_classes);
+  cross_entropy_backward_y_kernel<<<num_blocks, threads_per_block>>>(
+      t_softmax, y_grad, output_grad, batch_size, num_classes);
 
   cudaDeviceSynchronize();
+}
+
+__global__ void argmax_kernel(const float* X, float* Z, size_t axis_size,
+                              size_t axis_stride, size_t output_size,
+                              size_t ndim, size_t axis) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= output_size) return;
+
+  size_t start_idx =
+      (i / axis_stride) * axis_stride * axis_size + (i % axis_stride);
+
+  float max_val = -INFINITY;
+  size_t max_idx = 0;
+
+  for (size_t j = 0; j < axis_size; ++j) {
+    size_t idx = start_idx + j * axis_stride;
+    if (X[idx] > max_val) {
+      max_val = X[idx];
+      max_idx = j;
+    }
+  }
+
+  Z[i] = max_idx;
+}
+
+void GPUHandler::argmax(const float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = calculate_size(x_shape);
+  size_t output_size = input_size / x_shape[axis];
+  size_t ndim = x_shape.size();
+
+  std::vector<size_t> x_stride = calculate_strides(x_shape);
+
+  size_t block_size = 256;
+  size_t grid_size = (output_size + block_size - 1) / block_size;
+
+  argmax_kernel<<<grid_size, block_size>>>(X, Z, x_shape[axis], x_stride[axis],
+                                           output_size, ndim, axis);
+}
+
+__global__ void argmin_kernel(const float* X, float* Z, size_t axis_size,
+                              size_t axis_stride, size_t output_size,
+                              size_t ndim, size_t axis) {
+  size_t i = blockIdx.x * blockDim.x + threadIdx.x;
+  if (i >= output_size) return;
+
+  size_t start_idx =
+      (i / axis_stride) * axis_stride * axis_size + (i % axis_stride);
+
+  float min_val = INFINITY;
+  size_t min_idx = 0;
+
+  for (size_t j = 0; j < axis_size; ++j) {
+    size_t idx = start_idx + j * axis_stride;
+    if (X[idx] < min_val) {
+      min_val = X[idx];
+      min_idx = j;
+    }
+  }
+
+  Z[i] = min_idx;
+}
+
+void GPUHandler::argmin(const float* X, float* Z, std::vector<size_t> x_shape,
+                        size_t axis) {
+  size_t input_size = calculate_size(x_shape);
+  size_t output_size = input_size / x_shape[axis];
+  size_t ndim = x_shape.size();
+
+  std::vector<size_t> x_stride = calculate_strides(x_shape);
+
+  size_t block_size = 256;
+  size_t grid_size = (output_size + block_size - 1) / block_size;
+
+  argmin_kernel<<<grid_size, block_size>>>(X, Z, x_shape[axis], x_stride[axis],
+                                           output_size, ndim, axis);
 }
