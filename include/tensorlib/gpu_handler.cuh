@@ -138,20 +138,17 @@ class GPUHandler {
   static void copy_device_to_device(float* dst, const float* src, size_t size);
   static void zero(float* x, size_t size);
 
-  cublasHandle_t getHandle() { return handle; }
+  cublasHandle_t getHandle() { return handle_; }
+  cudaStream_t getStream() { return stream_; }
 
   GPUHandler(const GPUHandler&) = delete;
   GPUHandler& operator=(const GPUHandler&) = delete;
 
  private:
-  cublasHandle_t handle;
+  cublasHandle_t handle_;
+  cudaStream_t stream_;
 
-  GPUHandler() {
-    if (cublasCreate(&handle) != CUBLAS_STATUS_SUCCESS) {
-      throw std::runtime_error("Failed to create cuBLAS handle");
-    }
-  }
-
-  ~GPUHandler() { cublasDestroy(handle); }
+  GPUHandler();
+  ~GPUHandler();
 };
 #endif
