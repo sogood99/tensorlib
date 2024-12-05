@@ -119,7 +119,7 @@ for epoch in range(epochs):
     train_accuracy.append(correct / total)
 
     if epoch % 10 == 0:
-        print(f"Epoch {epoch}, Loss: {train_loss[-1]:.3f}, ", end="")
+        print(f"Epoch {epoch:03d}, Loss: {train_loss[-1]:.3f}, ", end="")
         print(f"Train Accuracy: {train_accuracy[-1]:.3f}, ", end="")
 
         # Test

@@ -84,7 +84,7 @@ for epoch in range(epochs):
     train_loss.append(loss.item())
 
     if epoch % 10 == 0:
-        print(f"Epoch {epoch}, Loss: {loss.item():.3f}", end=", ")
+        print(f"Epoch {epoch:02d}, Loss: {loss.item():.3f}", end=", ")
         pred_class = tl.argmax(y_pred, axis=1).to_numpy().astype(int)
         true_class = tl.argmax(y, axis=1).to_numpy().astype(int)
         train_accuracy.append(np.mean(pred_class == true_class))

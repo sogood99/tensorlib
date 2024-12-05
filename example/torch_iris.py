@@ -80,7 +80,7 @@ for epoch in range(epochs):
     train_loss.append(loss.item())
 
     if epoch % 10 == 0:
-        print(f"Epoch {epoch}, Loss: {loss.item():.3f}", end=", ")
+        print(f"Epoch {epoch:03d}, Loss: {loss.item():.3f}", end=", ")
 
         # Calculate train accuracy
         _, pred_class = torch.max(y_pred, 1)
