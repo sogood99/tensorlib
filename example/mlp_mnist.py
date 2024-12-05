@@ -90,22 +90,23 @@ for epoch in range(epochs):
     train_loss.append(loss.item())
 
     if epoch % 10 == 0:
-        print(f"Epoch {epoch:03d}, Loss: {loss.item():.3f}, ", end="")
-        pred_class = tl.argmax(y_pred, axis=1).to_numpy().astype(int)
-        true_class = tl.argmax(y_train, axis=1).to_numpy().astype(int)
-        train_accuracy.append(np.mean(pred_class == true_class))
-        # train accuracy to 3 decimal places
-        print(f"Train Accuracy: {train_accuracy[-1]:.3f}, ", end="")
+        with tl.no_grad():
+            print(f"Epoch {epoch:03d}, Loss: {loss.item():.3f}, ", end="")
+            pred_class = tl.argmax(y_pred, axis=1).to_numpy().astype(int)
+            true_class = tl.argmax(y_train, axis=1).to_numpy().astype(int)
+            train_accuracy.append(np.mean(pred_class == true_class))
+            # train accuracy to 3 decimal places
+            print(f"Train Accuracy: {train_accuracy[-1]:.3f}, ", end="")
 
-        # Test
-        y_pred = forward(X_test)
-        loss = tl.mean(tl.cross_entropy(y_pred, y_test))
-        test_loss.append(loss.item())
-        print(f"Test Loss: {loss.item():.3f}, ", end="")
-        pred_class = tl.argmax(y_pred, axis=1).to_numpy().astype(int)
-        true_class = tl.argmax(y_test, axis=1).to_numpy().astype(int)
-        test_accuracy.append(np.mean(pred_class == true_class))
-        print(f"Test Accuracy: {test_accuracy[-1]:.3f}")
+            # Test
+            y_pred = forward(X_test)
+            loss = tl.mean(tl.cross_entropy(y_pred, y_test))
+            test_loss.append(loss.item())
+            print(f"Test Loss: {loss.item():.3f}, ", end="")
+            pred_class = tl.argmax(y_pred, axis=1).to_numpy().astype(int)
+            true_class = tl.argmax(y_test, axis=1).to_numpy().astype(int)
+            test_accuracy.append(np.mean(pred_class == true_class))
+            print(f"Test Accuracy: {test_accuracy[-1]:.3f}")
 
 # Plot results if file output is provided
 if len(sys.argv) > 2:
