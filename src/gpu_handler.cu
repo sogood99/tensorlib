@@ -975,3 +975,57 @@ void GPUHandler::argmin(const float* X, float* Z, std::vector<size_t> x_shape,
   argmin_kernel<<<grid_size, block_size>>>(X, Z, x_shape[axis], x_stride[axis],
                                            output_size, ndim, axis);
 }
+
+float* GPUHandler::allocate(size_t size) {
+  float* device_data;
+  checkCudaErrors(cudaMalloc(&device_data, size * sizeof(float)));
+
+  return device_data;
+}
+
+float* GPUHandler::allocate_and_copy(const float* host_data, size_t size) {
+  float* device_data;
+  checkCudaErrors(cudaMalloc(&device_data, size * sizeof(float)));
+  checkCudaErrors(cudaMemcpy(device_data, host_data, size * sizeof(float),
+                             cudaMemcpyHostToDevice));
+
+  return device_data;
+}
+
+float* GPUHandler::allocate_and_zero(size_t size) {
+  float* device_data;
+  checkCudaErrors(cudaMalloc(&device_data, size * sizeof(float)));
+  checkCudaErrors(cudaMemset(device_data, 0, size * sizeof(float)));
+
+  return device_data;
+}
+
+void GPUHandler::deallocate(float* device_data) {
+  checkCudaErrors(cudaFree(device_data));
+}
+
+void GPUHandler::deallocate(size_t* device_data) {
+  checkCudaErrors(cudaFree(device_data));
+}
+
+void GPUHandler::copy_device_to_host(float* host_data, const float* device_data,
+                                     size_t size) {
+  checkCudaErrors(cudaMemcpy(host_data, device_data, size * sizeof(float),
+                             cudaMemcpyDeviceToHost));
+}
+
+void GPUHandler::copy_host_to_device(float* device_data, const float* host_data,
+                                     size_t size) {
+  checkCudaErrors(cudaMemcpy(device_data, host_data, size * sizeof(float),
+                             cudaMemcpyHostToDevice));
+}
+
+void GPUHandler::copy_device_to_device(float* dest, const float* src,
+                                       size_t size) {
+  checkCudaErrors(
+      cudaMemcpy(dest, src, size * sizeof(float), cudaMemcpyDeviceToDevice));
+}
+
+void GPUHandler::zero(float* device_data, size_t size) {
+  checkCudaErrors(cudaMemset(device_data, 0, size * sizeof(float)));
+}
