@@ -128,7 +128,9 @@ Epoch 50, Loss: 0.6931464672088623
 Training completed.
 ```
 
-More detailed experiments are located in [example/Experiment.md](example/Experiment.md).
+More detailed experiments are located in [example/Experiment.md](example/Experiment.md). Overall, we can see that the library has similar performance to PyTorch.
+
+![MNIST Dataset Training Time](fig/tl_torch_comparison_final.png)
 
 ## Project Structure
 
