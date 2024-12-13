@@ -5,3 +5,4 @@ _autorun.sh
 *.nsys*
 *.sqlite
 *.svg
+plot

@@ -128,6 +128,8 @@ Epoch 50, Loss: 0.6931464672088623
 Training completed.
 ```
 
+More detailed experiments are located in [example/Experiment.md](example/Experiment.md).
+
 ## Project Structure
 
 - `include/`: Header files.
